@@ -1,0 +1,29 @@
+# Environment and credentials
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.uv-cache/
+coverage.xml
+htmlcov/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+npm-cache/
+tmp/
+

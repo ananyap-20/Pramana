@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 900" role="img" aria-labelledby="title description">
+  <title id="title">Pramana implemented demo workflow</title>
+  <desc id="description">Four swimlanes show seeded configuration, creator draft submission, deterministic checks and evidence validation, and human decision with process-local history.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#111"/>
+    </marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #111; }
+      .title { font-size: 28px; font-weight: 700; }
+      .subtitle { font-size: 15px; }
+      .lane { fill: #fff; stroke: #111; stroke-width: 1.4; }
+      .label { font-size: 17px; font-weight: 700; }
+      .box { fill: #fff; stroke: #111; stroke-width: 1.5; }
+      .boxtext { font-size: 16px; }
+      .note { font-size: 14px; }
+      .arrow { fill: none; stroke: #111; stroke-width: 1.8; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1280" height="900" fill="#fff"/>
+  <text x="50" y="48" class="title">Pramana: Implemented Demo Workflow</text>
+  <text x="50" y="75" class="subtitle">Fictional LumaDesk v1 rules · human makes the final review decision · no automatic publishing</text>
+
+  <rect x="35" y="100" width="1210" height="145" class="lane"/>
+  <rect x="35" y="245" width="1210" height="145" class="lane"/>
+  <rect x="35" y="390" width="1210" height="300" class="lane"/>
+  <rect x="35" y="690" width="1210" height="175" class="lane"/>
+  <text x="52" y="132" class="label">Admin / config</text>
+  <text x="52" y="278" class="label">Content creator</text>
+  <text x="52" y="423" class="label">Pramana system</text>
+  <text x="52" y="723" class="label">Authorised reviewer</text>
+
+  <rect x="420" y="145" width="390" height="70" rx="3" class="box"/>
+  <text x="615" y="173" class="boxtext" text-anchor="middle">Seeded fictional LumaDesk rules and sources (v1)</text>
+  <text x="615" y="197" class="note" text-anchor="middle">Code-defined demo configuration; no admin editor</text>
+
+  <rect x="75" y="290" width="280" height="68" rx="3" class="box"/>
+  <text x="215" y="318" class="boxtext" text-anchor="middle">1. Paste draft or upload .docx</text>
+  <text x="215" y="341" class="note" text-anchor="middle">Ordinary paragraphs only</text>
+
+  <rect x="105" y="465" width="220" height="82" rx="3" class="box"/>
+  <text x="215" y="495" class="boxtext" text-anchor="middle">2. Extract supported text</text>
+  <text x="215" y="520" class="note" text-anchor="middle">Bounded size and DOCX intake</text>
+
+  <rect x="375" y="465" width="220" height="82" rx="3" class="box"/>
+  <text x="485" y="493" class="boxtext" text-anchor="middle">3. Run four deterministic</text>
+  <text x="485" y="516" class="boxtext" text-anchor="middle">checks</text>
+
+  <rect x="645" y="465" width="250" height="82" rx="3" class="box"/>
+  <text x="770" y="493" class="boxtext" text-anchor="middle">4. Validate exact quote,</text>
+  <text x="770" y="516" class="boxtext" text-anchor="middle">active rule and source</text>
+
+  <rect x="945" y="465" width="240" height="82" rx="3" class="box"/>
+  <text x="1065" y="493" class="boxtext" text-anchor="middle">5. Return findings and</text>
+  <text x="1065" y="516" class="boxtext" text-anchor="middle">Evidence Receipts</text>
+
+  <rect x="865" y="575" width="320" height="76" rx="3" class="box"/>
+  <text x="1025" y="601" class="boxtext" text-anchor="middle">Process-local history: latest 100 summaries</text>
+  <text x="1025" y="625" class="note" text-anchor="middle">Metadata and decisions only; no draft text</text>
+
+  <rect x="105" y="755" width="300" height="72" rx="3" class="box"/>
+  <text x="255" y="784" class="boxtext" text-anchor="middle">6. Inspect the same draft,</text>
+  <text x="255" y="808" class="boxtext" text-anchor="middle">passages and provenance</text>
+
+  <rect x="485" y="755" width="280" height="72" rx="3" class="box"/>
+  <text x="625" y="784" class="boxtext" text-anchor="middle">7. Record approve,</text>
+  <text x="625" y="808" class="boxtext" text-anchor="middle">revision or reject</text>
+
+  <rect x="885" y="755" width="300" height="72" rx="3" class="box"/>
+  <text x="1035" y="784" class="boxtext" text-anchor="middle">8. Open history to confirm</text>
+  <text x="1035" y="808" class="boxtext" text-anchor="middle">finding count and decision</text>
+
+  <path d="M215 358 V465" class="arrow"/>
+  <path d="M215 547 V755" class="arrow"/>
+  <path d="M325 506 H375" class="arrow"/>
+  <path d="M595 506 H645" class="arrow"/>
+  <path d="M895 506 H945" class="arrow"/>
+  <path d="M810 215 V426 H485 V465" class="arrow"/>
+  <path d="M1065 547 V755 H405" class="arrow"/>
+  <path d="M405 791 H485" class="arrow"/>
+  <path d="M765 791 H885" class="arrow"/>
+  <path d="M625 755 V690 H1025 V651" class="arrow"/>
+  <path d="M1025 651 V690 H1035 V755" class="arrow"/>
+
+  <text x="52" y="887" class="note">History is shared within the running demo process and is lost on restart, redeploy, or free-service spin-down.</text>
+</svg>

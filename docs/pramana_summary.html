@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pramana — Technical Status Report</title>
+<style>
+  @page { size: letter; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; color: #111; background: #fff; font: 10pt/1.4 Arial, Helvetica, sans-serif; }
+  .page { width: 8.5in; height: 11in; padding: .52in .62in; overflow: hidden; page-break-after: always; position: relative; }
+  .page:last-child { page-break-after: auto; }
+  h1 { margin: 0; font-size: 27pt; line-height: 1.08; }
+  h2 { margin: 15px 0 6px; font-size: 14pt; border-bottom: 1px solid #111; padding-bottom: 3px; }
+  h3 { margin: 9px 0 3px; font-size: 10.5pt; }
+  p { margin: 4px 0 7px; }
+  ul, ol { margin: 4px 0 8px; padding-left: 19px; }
+  li { margin: 2px 0; }
+  .meta { font-size: 9pt; margin: 7px 0 15px; }
+  .rule { border-top: 2px solid #111; margin: 11px 0 13px; }
+  .callout { border: 1px solid #111; padding: 8px 10px; margin: 8px 0; }
+  .draft { font-family: Georgia, serif; font-size: 11pt; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.7pt; margin: 5px 0 9px; }
+  th, td { border: 1px solid #111; text-align: left; vertical-align: top; padding: 4px 5px; }
+  th { font-weight: 700; }
+  .small { font-size: 8pt; }
+  .footer { position: absolute; bottom: .27in; left: .62in; right: .62in; border-top: 1px solid #111; padding-top: 4px; font-size: 8pt; display: flex; justify-content: space-between; }
+  .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media screen { body { background: #eee; } .page { margin: 16px auto; background: #fff; box-shadow: 0 1px 8px #aaa; } }
+  @media print { body { background: #fff; } .page { margin: 0; box-shadow: none; } a { color: #111; text-decoration: none; } }
+</style>
+</head>
+<body>
+<section class="page">
+  <h1>PRAMANA</h1>
+  <div class="meta">CodeStar 30 · Technical status report · Verified 29 October 2026 · Local demo</div>
+  <div class="rule"></div>
+  <h2>Problem and solution</h2>
+  <p>Brand rules are easy to miss when copy moves quickly from draft to publication. Pramana checks a draft against an approved, versioned rule set and returns evidence a person can inspect before deciding what to do.</p>
+  <p><strong>Value:</strong> every supported warning connects to the exact draft passage, rule version, source excerpt, and suggested next action. A human reviewer owns the decision; the product does not publish content.</p>
+  <h2>Verified user workflow</h2>
+  <ol>
+    <li>Creator pastes text or uploads a DOCX with ordinary paragraphs.</li>
+    <li>System runs four deterministic checks on seeded fictional LumaDesk rules.</li>
+    <li>Validator checks quotes against the submitted draft and provenance against active rules and sources.</li>
+    <li>Creator/reviewer inspects the exact draft and Evidence Receipts.</li>
+    <li>Reviewer records approve, revision, or reject; the same process-local history shows the decision.</li>
+  </ol>
+  <div class="callout">
+    <h3>Fictional demo scenario</h3>
+    <p class="draft">“Our dashboard is guaranteed to eliminate all errors. Starter plan supports 50 team members. Features launch this quarter.”</p>
+    <p>This draft produces a terminology warning, a prohibited-phrase warning, a contradicted 50-member fact, and a missing disclaimer. The seed source says Starter supports a maximum of 10 members. The approved fictional disclaimer is: <strong>“Features and availability may vary by plan.”</strong></p>
+  </div>
+  <table>
+    <thead><tr><th>Example finding</th><th>Evidence attached</th><th>Human next action</th></tr></thead>
+    <tbody>
+      <tr><td>`dashboard`</td><td>Brand Language Guide v1: use “workspace”; avoid “dashboard”.</td><td>Replace with “workspace”.</td></tr>
+      <tr><td>50 team members</td><td>Plan Facts v1: maximum 10 team members.</td><td>Correct the figure or verify it.</td></tr>
+      <tr><td>Feature claim without disclaimer</td><td>Disclaimer Policy v1 contains the exact required line.</td><td>Add the approved disclaimer.</td></tr>
+    </tbody>
+  </table>
+  <p class="small">LumaDesk, its policy documents, and all product facts in this report are fictional test data.</p>
+  <div class="footer"><span>Pramana · Technical status</span><span>Page 1 of 3</span></div>
+</section>
+
+<section class="page">
+  <h1>Implementation and validation</h1>
+  <div class="meta">Connected local application · no LLM or external analysis service</div>
+  <div class="rule"></div>
+  <h2>Architecture</h2>
+  <p><strong>Frontend:</strong> React, TypeScript, Vite. <strong>Backend:</strong> Python, FastAPI, Pydantic, python-docx. The request path is intake → deterministic rule engine → finding validator → API response → browser receipt and human decision.</p>
+  <p>Four seeded checks cover discouraged terminology, one prohibited phrase, one conflicting plan fact, and a narrow required-disclaimer trigger. Candidate evidence is validated before it is returned. The response preserves the exact evaluated draft so receipt passages can be inspected in context.</p>
+  <p>Review decisions are API-backed (`approved`, `revision`, `rejected`). History shows finding count and appended decisions. It is a shared in-memory demo store, not a durable audit log.</p>
+  <h2>Verification results</h2>
+  <table>
+    <thead><tr><th>Check</th><th>Observed result</th><th>What it establishes</th></tr></thead>
+    <tbody>
+      <tr><td>Backend test suite</td><td><strong>54 passed</strong>, 1 deprecation warning</td><td>Expected behavior for this fictional regression suite</td></tr>
+      <tr><td>Python compileall</td><td>Passed</td><td>Backend modules compile</td></tr>
+      <tr><td>Frontend production build</td><td>Passed</td><td>TypeScript and Vite build succeed</td></tr>
+      <tr><td>Local browser journey</td><td>Passed: analyze → receipts → decision → history</td><td>Connected local workflow and API; not a deployed test</td></tr>
+    </tbody>
+  </table>
+  <p class="small">54/54 is the pass rate for the executed automated suite. It is not a measure of real-world precision, recall, or brand-compliance accuracy. The browser check used fictional sample content; a 731 px compact view was inspected, but 390 px was not separately inspected.</p>
+  <h2>Important limitations</h2>
+  <ul>
+    <li>No authentication, authorization, organization separation, or rate limiting. Shared history summaries are visible to visitors of the same running instance; a visitor who knows a run ID can change its decision.</li>
+    <li>History retains at most 100 metadata records in process memory and disappears on restart, redeploy, or free-service spin-down. Draft text is not stored in the history repository.</li>
+    <li>Only pasted text and ordinary DOCX paragraphs are supported. No PDF, table/image extraction, OCR, arbitrary claim verification, or automatic rewrite.</li>
+    <li>Do not use with confidential drafts or as a production compliance or audit system.</li>
+  </ul>
+  <div class="footer"><span>Pramana · Technical status</span><span>Page 2 of 3</span></div>
+</section>
+
+<section class="page">
+  <h1>Progress, deployment, roadmap</h1>
+  <div class="meta">Evidence-led status; unverified work is labeled as proposed</div>
+  <div class="rule"></div>
+  <h2>Progress against the supplied archive</h2>
+  <ul>
+    <li>Fixed the frontend production build error and verified a successful Vite build.</li>
+    <li>Replaced simulated sign-off and sample-based history with API-backed decisions and actual run summaries.</li>
+    <li>Added safe document-size bounds, receipt context, responsive navigation, and corrected feature/security claims in project materials.</li>
+    <li>Added a test matrix and a workflow diagram that labels seeded configuration and process-local history accurately.</li>
+  </ul>
+  <p>The supplied archive did not include an independently verifiable Round 1 baseline, so this report makes no claim about measured Round 1 progress.</p>
+  <h2>Deployment status</h2>
+  <p>Render and Vercel configuration is prepared for review; nothing has been published, pushed, or deployed. The source archive's Git remote names `teclium28-jpg/Pramana`, while the request identifies `ananyap-20`; confirm repository ownership before a public push.</p>
+  <p>Official terms checked on 29 October 2026: Render free web services sleep after 15 idle minutes, take about a minute to wake, have ephemeral local filesystems, and receive 750 free instance hours per workspace per calendar month. Render says free services are not for production. Vercel Hobby is limited to personal, non-commercial use; confirm this project qualifies before selecting it. Recheck current provider terms and billing before deployment.</p>
+  <p class="small">Sources: <a href="https://render.com/docs/free">render.com/docs/free</a> · <a href="https://render.com/docs/blueprint-spec">render.com/docs/blueprint-spec</a> · <a href="https://vercel.com/docs/plans/hobby">vercel.com/docs/plans/hobby</a></p>
+  <h2>Three proposed Round 3 improvements</h2>
+  <div class="columns">
+    <div><h3>1. Document and image intake</h3><p>Support one new format at a time with bounded extraction, page/region provenance, confidence indicators, and human confirmation for low-confidence OCR. Estimate: 5–8 days for one format.</p></div>
+    <div><h3>2. Visual brand and accessibility</h3><p>Start with measurable logo, palette, contrast, and missing-alt checks using approved brand assets. Keep subjective judgments with human reviewers. Estimate: 4–7 days.</p></div>
+  </div>
+  <div><h3>3. Persistent audit and analytics</h3><p>Add authentication, organization isolation, retention policy, and relational event storage before durable analytics. Estimate: 8–12 days; includes privacy, backup, and access-control work.</p></div>
+  <div class="callout"><strong>Conclusion:</strong> The local demo now supports the central evidence-to-human-decision path and has reproducible build/test results. It is prepared for review, not ready to treat as a secure production service. Full risks and measurable roadmap criteria are in the project docs.</div>
+  <div class="footer"><span>Pramana · Technical status</span><span>Page 3 of 3</span></div>
+</section>
+</body>
+</html>
