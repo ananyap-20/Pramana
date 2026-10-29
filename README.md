@@ -51,6 +51,8 @@ The backend and frontend are configured together in [`render.yaml`](render.yaml)
 2. Set `CORS_ORIGINS` to the exact deployed frontend origin, including `https://` and without a trailing slash. Set the frontend's `VITE_API_BASE_URL` to the deployed API origin, also without a trailing slash, then redeploy both services.
 3. Verify the API `/health` endpoint, open the frontend, submit the sample, inspect receipts, record a decision, and confirm history.
 
+Deployment attempt status (2026-10-29): Render blocked Blueprint creation with an account-level card-verification modal and hCaptcha. No services or live URLs were created, and no payment details were entered. The repository and free-tier Blueprint remain ready; continue only after the account-level checks are completed manually.
+
 Platform terms checked against official docs on 2026-10-29: [Render free services](https://render.com/docs/free), [Render static sites](https://render.com/docs/static-sites), and [Render Blueprint YAML](https://render.com/docs/blueprint-spec). Render static sites are free to deploy. Free web services sleep after 15 minutes without traffic, take about a minute to wake, have ephemeral local filesystems, receive 750 free instance hours per workspace each calendar month, and are not recommended for production. Check current provider terms and billing settings before deployment; no cost is guaranteed by this repository.
 
 The backend has no authentication or rate limiting. Its shared process-local decision/history store is suitable only for a disposable public demo with fictional/sample content, not private drafts or audit requirements. Render restarts, redeployments, and spin-downs can clear history.
