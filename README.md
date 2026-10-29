@@ -45,7 +45,7 @@ Never put a real `.env` file, credentials, or secrets in Git. The API returns th
 
 ## Deployment preparation
 
-Configuration is prepared in [`render.yaml`](render.yaml) and [`frontend/vercel.json`](frontend/vercel.json). No account, repository, or deployment has been created from these files.
+Configuration is prepared in [`render.yaml`](render.yaml) and [`frontend/vercel.json`](frontend/vercel.json). The clean project is published publicly at [github.com/ananyap-20/Pramana](https://github.com/ananyap-20/Pramana) on `main`; no hosting service has been created yet.
 
 1. Deploy the repository root as a Render Python web service using the Blueprint. Set `CORS_ORIGINS` to the exact deployed Vercel origin, including `https://` and without a trailing slash.
 2. Import the same repository into Vercel with **Root Directory** set to `frontend`. Set `VITE_API_BASE_URL` to the deployed Render API origin, without a trailing slash, then deploy.
@@ -79,4 +79,4 @@ The test pass rate describes this synthetic regression suite only; it does not m
 - [`docs/evaluation.md`](docs/evaluation.md): synthetic evaluator scenarios and limits.
 - [`docs/optimization-report.md`](docs/optimization-report.md): factual architecture and implementation notes.
 
-No license has been added. The current Git remote in the supplied archive points to a different GitHub account than the account named in the request; review and correct repository ownership before any public push.
+No license has been added. The supplied archive's old Git remote pointed to `teclium28-jpg/Pramana`; that history was excluded. The published repository starts with a fresh `main` branch under the requested `ananyap-20` account.

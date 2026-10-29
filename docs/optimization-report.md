@@ -36,7 +36,7 @@ Snapshot verified 2026-10-29. The supplied source archive contained a React/Vite
 - Exact draft is returned to the submitting browser; it is not retained in backend history. Do not submit confidential copy to a public instance.
 - Only ordinary DOCX paragraphs and pasted text are supported; there is no PDF, image, table, OCR, or general-purpose fact verification.
 - No LLM was added. External draft processing would add cost, privacy, and evidence-grounding concerns; it is not needed for this verified deterministic demo.
-- The source archive's Git remote points to `teclium28-jpg/Pramana`, while the request names `ananyap-20`. The repository identity needs user review before publishing.
+- The source archive's Git remote pointed to `teclium28-jpg/Pramana`; that history was excluded. The clean project is now published under `ananyap-20/Pramana` on a fresh `main` branch. Hosting services are not yet deployed.
 
 ## Architecture sketch
 
