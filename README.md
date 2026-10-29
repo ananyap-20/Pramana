@@ -45,13 +45,13 @@ Never put a real `.env` file, credentials, or secrets in Git. The API returns th
 
 ## Deployment preparation
 
-Configuration is prepared in [`render.yaml`](render.yaml) and [`frontend/vercel.json`](frontend/vercel.json). The clean project is published publicly at [github.com/ananyap-20/Pramana](https://github.com/ananyap-20/Pramana) on `main`; no hosting service has been created yet.
+The backend and frontend are configured together in [`render.yaml`](render.yaml). The clean project is published publicly at [github.com/ananyap-20/Pramana](https://github.com/ananyap-20/Pramana) on `main`; no hosting service has been created yet.
 
-1. Deploy the repository root as a Render Python web service using the Blueprint. Set `CORS_ORIGINS` to the exact deployed Vercel origin, including `https://` and without a trailing slash.
-2. Import the same repository into Vercel with **Root Directory** set to `frontend`. Set `VITE_API_BASE_URL` to the deployed Render API origin, without a trailing slash, then deploy.
-3. Verify `/health`, open the frontend, submit the sample, inspect receipts, record a decision, and confirm history.
+1. Create the Render Blueprint from the repository root; it defines a free Python API web service and a free static frontend.
+2. Set `CORS_ORIGINS` to the exact deployed frontend origin, including `https://` and without a trailing slash. Set the frontend's `VITE_API_BASE_URL` to the deployed API origin, also without a trailing slash, then redeploy both services.
+3. Verify the API `/health` endpoint, open the frontend, submit the sample, inspect receipts, record a decision, and confirm history.
 
-Platform terms checked against official docs on 2026-10-29: [Render free services](https://render.com/docs/free), [Render Blueprint YAML](https://render.com/docs/blueprint-spec), [Vercel Hobby](https://vercel.com/docs/plans/hobby), and [Vercel project configuration](https://vercel.com/docs/project-configuration/vercel-json). Render free web services sleep after 15 minutes without traffic, take about a minute to wake, have ephemeral local filesystems, receive 750 free instance hours per workspace each calendar month, and are not recommended for production. Vercel Hobby is restricted to personal, non-commercial use; confirm the project qualifies before using it. Confirm both providers' current terms and billing settings before deployment; no cost is guaranteed by this repository.
+Platform terms checked against official docs on 2026-10-29: [Render free services](https://render.com/docs/free), [Render static sites](https://render.com/docs/static-sites), and [Render Blueprint YAML](https://render.com/docs/blueprint-spec). Render static sites are free to deploy. Free web services sleep after 15 minutes without traffic, take about a minute to wake, have ephemeral local filesystems, receive 750 free instance hours per workspace each calendar month, and are not recommended for production. Check current provider terms and billing settings before deployment; no cost is guaranteed by this repository.
 
 The backend has no authentication or rate limiting. Its shared process-local decision/history store is suitable only for a disposable public demo with fictional/sample content, not private drafts or audit requirements. Render restarts, redeployments, and spin-downs can clear history.
 
