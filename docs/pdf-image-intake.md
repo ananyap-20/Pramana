@@ -1,5 +1,17 @@
 # PDF/image intake: local implementation and verification
 
+## 3 November follow-up: import/configuration fixes
+
+The checked-in Render manifests now use the existing Docker runtime with Tesseract/English data and set `PRAMANA_ENABLE_LOCAL_INTAKE=1`. The setup example enables intake too; the application still honors an explicit `0` and defaults off when the variable is absent. Existing hosted services must apply these settings and redeploy; editing a manifest does not change a running service. No deployment was performed.
+
+The current authenticated flow uses a verified session cookie plus CSRF protection, with the extraction capability also bound to the user. Confirmed analysis goes through `/api/audit/intake/{id}/analyze` and saves the accepted text and receipts to the workspace audit repository. The original anonymous endpoints documented below describe the earlier implementation and are blocked by the current outer identity middleware.
+
+Verification: 16 existing PDF/image tests passed with real extraction/OCR. Three additional `test_identity_intake.py` acceptance cases exercised text-only, scanned and mixed PDFs through the actual identity/CSRF middleware, preview, confirmation, audit analysis and decision routes; cross-user access returned 404. Firebase verification and MongoDB were local test doubles; parsers and Tesseract were real. The full backend suite completed without failures; optional integration cases skipped when their external services were unavailable.
+
+The earlier Windows hang happened before extraction, in Python's asyncio loopback socket creation under the restricted execution sandbox. Running the same tests with local socket/process access resolved it. Bounded upload handling remains in place. The frontend provides extraction/preview retries, releases preview URLs and prevents confirmation before every preview is available.
+
+Browser verification on an isolated localhost server with fictional data: scanned PDF upload, OCR and rendered preview, explicit confirmation, analysis and a human revision decision passed. No live Firebase, Atlas or hosted OCR verification is implied.
+
 Implemented 3 November 2026 on `codex/pdf-image-intake`, from `main` at `1dd8ae5`.
 The pre-existing untracked `docs/prompts/` directory was preserved. Nothing was pushed or deployed.
 
@@ -36,7 +48,7 @@ For a normal system installation use `C:/Program Files/Tesseract-OCR/tesseract.e
 
 ## Linux packaging
 
-`Dockerfile` installs Debian Tesseract and English data, installs Python dependencies from `uv.lock`, and runs as UID 10001 with one API worker. Its `verification` target includes the test-only ReportLab dependency. Existing `render.yaml` still describes the earlier Python runtime and **does not install OCR**; use the Docker runtime through an explicitly reviewed hosting change. No hosting settings were changed here.
+`Dockerfile` installs Debian Tesseract and English data, installs Python dependencies from `uv.lock`, and runs as UID 10001 with one API worker. Its `verification` target includes the test-only ReportLab dependency. Both Render manifests now select this Docker runtime with intake enabled. These are local configuration changes; hosted settings have not been applied.
 
 ```powershell
 docker build --target verification -t pramana-intake-verify:local .

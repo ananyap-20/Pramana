@@ -2,6 +2,8 @@
 
 This React/TypeScript/Vite app is the browser interface for the Pramana demo. For full architecture, backend setup, security limits, and deployment instructions, see the [project README](../README.md).
 
+The public landing experience introduces Pramana and provides Firebase email/password, Google and GitHub sign-in. All application routes are gated by the server-verified session. Copy `.env.example` to an ignored `.env.local`, fill the public Firebase web configuration, and follow [authentication setup](../docs/authentication.md) for backend credentials, verified email, provider domains, session cookies and workspace permissions. No Admin/OAuth secret belongs in a `VITE_*` variable.
+
 From this directory:
 
 ```powershell
@@ -16,4 +18,4 @@ The warm editorial interface adapts the supplied HTML references to the existing
 
 Run `npm.cmd run test` for focused API-client/evidence regressions (Node 24 used), `npm.cmd run build` for TypeScript and the production bundle, and `npm.cmd run lint` for lint checks. Tests use Node's built-in runner; no additional packages are required.
 
-Reviewer access is at `#/reviewer-access` and uses an administrator-issued organization key. Static visual checks are at `#/visual-checks` and require an approved backend manifest. Shared demo history retains metadata only; connected organization history can reopen saved snapshots. Original-file downloads depend on private-storage configuration. Existing draft, review, evidence, history and policy hash routes remain supported.
+Account details are at `#/reviewer-access`; roles and memberships are assigned on the server. Static visual checks are at `#/visual-checks` and require an approved backend manifest. Signed-in history can reopen saved workspace snapshots. Legacy shared history is separate and unavailable in these flows. Original-file downloads depend on private-storage configuration. Existing draft, review, evidence, history and policy hash routes remain supported after sign-in. Production frontend/API hosting must share a site or use a same-origin proxy; unrelated hosting subdomains cannot use the chosen Lax cookies.

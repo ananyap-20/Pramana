@@ -16,7 +16,7 @@ def main():
             print("FAIL: authenticated MongoDB and Bunny settings are required.")
             return 1
         runtime.start()
-        runtime.files.sweep()
+        runtime.sweep_files()
         print("PASS: completed a bounded expired-file cleanup sweep.")
         return 0
     except Exception as error:

@@ -69,8 +69,8 @@ class Confirmation(ImmutableModel):
     version: int
     text_sha256: str
     confirmed_at: datetime
-    actor: None = None
-    actor_kind: Literal["anonymous_capability_holder"] = "anonymous_capability_holder"
+    actor: str | None = None
+    actor_kind: Literal["anonymous_capability_holder", "authenticated_user"] = "anonymous_capability_holder"
 
 
 class ExtractionResponse(BaseModel):
@@ -113,7 +113,7 @@ class DocumentProvenance(ImmutableModel):
     text_sha256: str
     human_edited: bool
     confirmed_at: datetime
-    actor: None = None
+    actor: str | None = None
     actor_kind: str = "anonymous_capability_holder"
     tools: dict[str, str]
     settings: dict[str, str | int]

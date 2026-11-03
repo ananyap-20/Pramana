@@ -1,0 +1,1300 @@
+<!DOCTYPE html><html class="h-full antialiased" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Pramana | Brand Compliance Copilot</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Google Fonts: Inter & Newsreader & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fbf9f5',
+              100: '#f5f2eb',
+              500: '#1c1917',
+              600: '#0c0a09',
+              gold: '#c59b27',
+              accent: '#775a00'
+            },
+            surface: {
+              DEFAULT: '#ffffff',
+              warm: '#faf8f5',
+              subtle: '#f5f2eb',
+              border: '#e5dfd3'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+            serif: ['Newsreader', 'Georgia', 'serif'],
+            mono: ["'JetBrains Mono'", 'monospace']
+          },
+          boxShadow: {
+            card: '0 1px 3px 0 rgba(28, 25, 23, 0.04)',
+            float: '0 10px 25px -3px rgba(28, 25, 23, 0.08), 0 4px 6px -4px rgba(28, 25, 23, 0.04)',
+            popover: '0 20px 35px -10px rgba(28, 25, 23, 0.15), 0 0 0 1px rgba(28, 25, 23, 0.08)'
+          }
+        }
+      }
+    }
+</script>
+<style>
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #d6cebf; border-radius: 9999px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #b8ad99; }
+
+  /* Dotted paper background */
+  .pattern-grid {
+    background-color: #f9f5ed;
+    background-image: radial-gradient(rgba(180, 140, 39, 0.16) 1.25px, transparent 1.25px);
+    background-size: 24px 24px;
+  }
+
+  /* Tour callout arrows */
+  .callout-arrow {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: #ffffff;
+    transform: rotate(45deg);
+    border: 1px solid #d6cebf;
+    z-index: 60;
+    pointer-events: none;
+  }
+  .callout-arrow-top { top: -8px; border-bottom: none; border-right: none; }
+  .callout-arrow-bottom { bottom: -8px; border-top: none; border-left: none; }
+  .callout-arrow-left { left: -8px; border-top: none; border-right: none; }
+  .callout-arrow-right { right: -8px; border-bottom: none; border-left: none; }
+</style>
+</head>
+<body class="pattern-grid text-[#1c1918] font-sans antialiased h-screen max-h-screen overflow-hidden flex flex-col selection:bg-amber-100 selection:text-amber-900 relative" data-mode="connect">
+<!-- TOP HEADER -->
+<header class="w-full border-b border-[#E5DFD3] bg-[#FAF8F5]/95 backdrop-blur px-4 md:px-6 sticky top-0 z-30 flex-shrink-0 relative">
+<div class="max-w-[1440px] mx-auto flex items-center justify-between h-13">
+<div class="flex items-center space-x-3.5">
+<button onclick="switchMainView('studio')" class="flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-85 text-left border-0 bg-transparent p-0" title="Return to Draft Studio"><div class="w-7 h-7 rounded-md bg-[#1C1917] text-[#FAF8F5] flex items-center justify-center font-bold text-sm tracking-tight shadow-xs font-serif">P</div><div class="flex items-baseline gap-1.5"><span class="text-[17px] font-bold text-[#1C1917] tracking-tight font-serif">Pramana</span><span class="text-[11px] font-bold text-[#92400E] bg-[#FEF3C7] px-2 py-0.5 rounded border border-[#FDE68A] font-mono uppercase tracking-wider">Guardian</span></div></button>
+<div class="h-4 w-px bg-[#E5DFD3] hidden sm:block"></div>
+<span class="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F5F2EB] border border-[#E5DFD3] text-xs text-[#383430] font-semibold">
+<span class="h-2 w-2 rounded-full bg-[#16A34A]"></span>
+<span class="">4 Active Rules</span>
+</span>
+</div>
+<nav aria-label="Main Navigation" class="hidden md:flex items-center space-x-1.5"><button id="navTabStudio" onclick="switchMainView('studio')" class="nav-tab-btn bg-white text-[#1C1917] font-semibold text-[13px] px-3.5 py-1.5 rounded-lg shadow-xs flex items-center gap-1.5 border border-[#E5DFD3] transition-all cursor-pointer" type="button" aria-current="page"><span class="material-symbols-outlined text-[17px] text-[#C59B27]">edit_note</span><span class="">Draft Studio</span></button><a id="navTabAudit" href="#audit-trail" onclick="switchMainView('audit')" class="nav-tab-btn text-[#57534E] hover:text-[#1C1917] font-semibold text-[13px] px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 hover:bg-white/70 cursor-pointer" title="View Audit Trail"><span class="material-symbols-outlined text-[17px] text-[#78716C]">verified</span><span class="">Audit Trail</span></a><a id="navTabPolicies" href="#active-policies" onclick="switchMainView('policies')" class="nav-tab-btn text-[#57534E] hover:text-[#1C1917] font-semibold text-[13px] px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 hover:bg-white/70 cursor-pointer" title="View Active Policies"><span class="material-symbols-outlined text-[17px] text-[#78716C]">policy</span><span class="">Active Policies</span></a></nav>
+<div class="flex items-center space-x-2.5">
+<button class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white hover:bg-[#F5F2EB] text-[#1C1917] border border-[#D6CEBF] text-xs md:text-[13px] font-semibold transition-all shadow-xs cursor-pointer ring-1 ring-amber-500/20 active:scale-95" id="openTourBtn" onclick="openTour()" title="Interactive Guided Tour">
+<span class="material-symbols-outlined text-[17px] text-[#C59B27]">help</span>
+<span class="">Guide</span>
+</button>
+<button class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#F5F2EB] hover:bg-white text-[#44403C] border border-[#E5DFD3] text-xs md:text-[13px] font-semibold transition-all shadow-xs cursor-pointer active:scale-95" id="shareReviewBtn" title="Share Review">
+<span class="material-symbols-outlined text-[16px] text-[#78716C]">share</span>
+<span class="hidden sm:inline">Share</span>
+</button>
+<div class="h-4 w-px bg-[#E5DFD3] hidden sm:block"></div>
+<button id="profileAvatarBtn" onclick="toggleSignInModal()" class="h-7 w-7 rounded-full bg-[#E5DFD3] hover:bg-[#FAF8F5] text-[#292524] border border-[#D6CEBF] flex items-center justify-center font-bold text-xs cursor-pointer shadow-xs transition-all active:scale-95 ring-1 ring-black/5" title="Reviewer Account / Sign In: Brandon K.">BK</button>
+</div>
+</div>
+</header>
+<!-- MAIN WORKSPACE -->
+<main class="flex-1 w-full max-w-[1440px] mx-auto px-4 md:px-6 flex flex-col min-h-0 overflow-hidden py-3 space-y-3 relative z-10">
+<!-- TOP CONTEXT STRIP -->
+<div class="px-2 py-2 flex items-center justify-between gap-3 text-sm flex-shrink-0" id="mainHeaderStrip">
+  <div class="flex items-center gap-4 relative z-10">
+    <div class="flex flex-col">
+      <div class="flex items-center gap-2.5">
+        <h1 class="text-xl md:text-[23px] font-bold tracking-tight text-[#1C1917] font-serif" id="currentViewTitle">Deterministic Copy Review</h1>
+        <span class="px-2.5 py-0.5 rounded-md bg-[#F5F2EB] text-[#57534E] font-mono text-xs font-semibold whitespace-nowrap" id="currentViewBadge">Pre-Publication</span>
+      </div>
+      <p class="text-xs md:text-[13.5px] text-[#6b645b] mt-0.5" id="currentViewSubtitle">Verifying copy against 4 LumaDesk policies with local zero-retention inspection.</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2.5 relative z-10 shrink-0">
+    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F0FDF4] text-[#166534] font-bold text-xs md:text-[13px]">
+      <span class="material-symbols-outlined text-[17px]">task_alt</span>
+      <span class="">Auditor Mode</span>
+    </div>
+    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFFBEB] text-[#92400E] font-bold text-xs md:text-[13px]" id="bannerIssuesChip">
+      <span class="w-2 h-2 rounded-full bg-[#F59E0B]"></span>
+      <span id="bannerIssuesText" class="">3 Policy Flags</span>
+    </div>
+  </div>
+</div>
+<!-- 2-COLUMN SPLIT WORKSPACE -->
+<div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch min-h-0 overflow-hidden" id="viewDraftStudio">
+<!-- LEFT COLUMN (5 Cols): Sandbox Info + Draft Editor -->
+<div class="lg:col-span-5 flex flex-col h-full min-h-0 overflow-y-auto pr-1 custom-scrollbar space-y-3" id="draftSandboxContainer">
+<section class="bg-white border border-[#E5DFD3] rounded-xl p-4 md:p-5 shadow-xs flex flex-col space-y-3 flex-1 min-h-0 relative" id="draft-workspace">
+<div class="flex items-center justify-between pb-3 border-b border-[#E5DFD3] flex-shrink-0 relative z-10">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[22px] text-[#C59B27]">edit_document</span>
+<h2 class="text-lg md:text-[21px] font-bold text-[#1C1917] font-serif tracking-tight">Draft Inspection Sandbox</h2>
+</div>
+<div class="flex items-center bg-[#F5F2EB] p-0.5 rounded-lg border border-[#E5DFD3] text-xs font-semibold" id="presetSwitcherGroup">
+<button class="px-2.5 py-1 rounded-md bg-white text-[#1C1917] font-bold shadow-xs transition-colors cursor-pointer text-xs" id="presetBtn1">Launch Copy</button>
+<button class="px-2.5 py-1 rounded-md text-[#57534E] hover:text-[#1C1917] font-semibold transition-colors cursor-pointer text-xs" id="presetBtn2">Social Ad</button>
+<button class="px-2.5 py-1 rounded-md text-[#57534E] hover:text-[#1C1917] font-semibold transition-colors cursor-pointer text-xs" id="presetBtn3">Influencer</button>
+</div>
+</div>
+<!-- Comfortable text-base / 15-16px font size -->
+<div class="relative flex flex-col flex-1 min-h-[180px] z-10">
+<label class="sr-only" for="draftText">Draft Content</label>
+<textarea class="w-full flex-1 p-4 md:p-4.5 text-[15px] md:text-[16px] font-sans text-[#24211E] font-normal rounded-xl border border-[#E5DFD3] resize-none focus:border-[#C59B27] focus:ring-1 focus:ring-[#C59B27] leading-[1.65] outline-none min-h-[190px] bg-[#FAF8F5]/40 hover:bg-white focus:bg-white transition-colors custom-scrollbar shadow-xs" id="draftText" rows="7">Introducing the LumaDesk Pro: the ultimate all-in-one desk for remote professionals seeking flawless ergonomics. 
+
+Engineered with dual high-torque whisper motors and aerospace grade aluminum, every desk comes backed by our 100% indestructible lifetime guarantee. Regardless of where work takes you, LumaDesk ships free to Antarctica on standard tier without hidden cargo surcharges.
+
+Disclosure: This promotion is sponsored by LumaDesk Innovations. All verified purchases include our official standard desk setup guide.</textarea>
+<div class="absolute top-3 right-3 hidden items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#1C1917] text-[#FAF8F5] text-xs font-semibold shadow-md pointer-events-none" id="fixToast">
+<span class="material-symbols-outlined text-[16px] text-[#4ADE80] font-bold">check</span>
+<span class="">Applied replacement</span>
+</div>
+<div class="flex items-center justify-between mt-2.5 text-xs md:text-[13px] text-[#6b645b] flex-shrink-0">
+<div class="flex items-center gap-3 font-mono text-[11.5px] md:text-xs">
+<span class="font-semibold text-[#383430]" id="wordCountBadge">70 words</span>
+<span class="text-[#D6CEBF]">•</span>
+<span class="font-semibold text-[#383430]" id="charCountBadge">520 characters</span>
+<span class="text-[#D6CEBF]">•</span>
+<span class="text-[#166534] font-bold">3 Blocks Parsed</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="text-[#6b645b] hover:text-[#1C1917] font-semibold flex items-center gap-1 text-xs md:text-[13px] transition-colors cursor-pointer" id="resetDraftBtn" title="Reset to original sample" type="button">
+<span class="material-symbols-outlined text-[16px]">restart_alt</span> Reset
+              </button>
+</div>
+</div>
+</div>
+<div class="pt-2 grid grid-cols-1 sm:grid-cols-12 gap-2.5 flex-shrink-0 relative z-10">
+<div class="sm:col-span-7">
+<button class="w-full inline-flex items-center justify-center gap-2 bg-[#1C1917] hover:bg-[#292524] text-white py-2.5 px-4 rounded-xl text-xs md:text-[13.5px] font-bold shadow-xs transition-all cursor-pointer active:scale-[0.99]" id="checkDraftBtn" type="button">
+<span class="material-symbols-outlined text-[18px] text-[#C59B27]">verified</span>
+<span class="">Run Compliance Scan</span>
+<kbd class="ml-1 px-1.5 py-0.5 bg-[#292524] rounded text-[11px] font-mono text-[#D6CEBF] border border-[#44403C]">⌘↵</kbd>
+</button>
+</div>
+<div class="sm:col-span-5">
+<button class="w-full inline-flex items-center justify-center gap-1.5 bg-[#FAF8F5] hover:bg-white text-[#1C1917] border border-[#D6CEBF] py-2.5 px-3 rounded-xl text-xs md:text-[13.5px] font-bold shadow-xs transition-all cursor-pointer active:scale-[0.99]" id="autoFixAllBtn" type="button">
+<span class="material-symbols-outlined text-[18px] text-[#C59B27]">auto_fix_high</span>
+<span class="">1-Click Auto-Fix</span>
+</button>
+</div>
+</div>
+<div class="hidden p-3 rounded-xl bg-[#F0FDF4] border border-[#BBF7D0] text-xs md:text-[13px] text-[#166534] font-semibold items-center justify-between relative z-10" id="diffBanner">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#16A34A] text-[18px]">check_circle</span>
+<span class="">All 3 Violations Resolved • Score: <strong>100% Passed</strong></span>
+</div>
+<button class="text-xs md:text-[13px] font-bold text-[#166534] hover:underline cursor-pointer" id="undoFixBtn">Undo</button>
+</div>
+</section>
+</div>
+<!-- RIGHT COLUMN (7 Cols): Findings + Remediation + Verdict Dock -->
+<div class="lg:col-span-7 flex flex-col h-full min-h-0 overflow-hidden overflow-y-auto custom-scrollbar" id="review-evidence">
+<!-- Findings Summary Bar -->
+<div class="bg-white border border-[#E5DFD3] rounded-2xl shadow-xs flex items-center justify-between flex-shrink-0 mb-3 px-4 md:px-5 py-3.5" id="findingsSummaryBar">
+<div class="flex items-center justify-between gap-4 w-full relative z-10">
+<div class="flex items-center gap-3.5 min-w-0">
+<div class="flex items-center justify-center w-12 h-12 rounded-xl bg-[#FAF8F5] text-[#92400E] font-mono font-bold text-base shrink-0 border border-[#E5DFD3] shadow-xs" id="scoreIndicator">3/4</div>
+<div class="flex flex-col justify-center min-w-0 gap-1">
+<div class="flex items-center gap-2.5 flex-wrap">
+<h3 class="font-bold text-[#1C1917] font-serif tracking-tight leading-tight text-xl md:text-2xl">Inspection Findings</h3>
+<span class="text-xs px-2.5 py-0.5 rounded-full bg-[#F5F2EB] text-[#57534E] font-mono font-semibold border border-[#E5DFD3]" id="statusSubtitle">4 rules evaluated</span>
+</div>
+<div class="flex items-center gap-2 flex-wrap text-xs font-semibold">
+<span class="px-2.5 py-0.5 rounded-full bg-[#FFF1F2] text-[#9F1239] whitespace-nowrap border border-[#FDE68A]/40 font-bold" id="badgeProhibited">1 Prohibited</span>
+<span class="px-2.5 py-0.5 rounded-full bg-[#FFFBEB] text-[#92400E] whitespace-nowrap border border-[#FDE68A] font-bold" id="badgeWarnings">2 Warnings</span>
+<span class="px-2.5 py-0.5 rounded-full bg-[#F0FDF4] text-[#166534] whitespace-nowrap border border-[#BBF7D0] font-bold" id="badgeCompliant">1 Compliant</span>
+<span class="text-xs text-[#78716C] hidden sm:inline ml-1 font-normal">• Deterministic policy flags</span>
+</div>
+</div>
+</div>
+<div class="flex items-center shrink-0">
+<div class="flex items-center bg-[#F5F2EB] p-0.5 rounded-lg text-xs font-semibold border border-[#E5DFD3]">
+<button class="px-3 py-1 rounded-md text-[#1C1917] bg-white font-bold transition-colors cursor-pointer text-xs shadow-xs" id="expandAllBtn" type="button">Expand</button>
+<button class="px-3 py-1 rounded-md text-[#57534E] hover:text-[#1C1917] font-semibold transition-colors cursor-pointer text-xs" id="collapseAllBtn" type="button">Collapse</button>
+</div>
+</div>
+</div>
+</div>
+<!-- SCROLLABLE FINDINGS LIST (Tour Target Step 2) -->
+<div class="flex-1 overflow-y-auto pr-1 space-y-2.5 custom-scrollbar min-h-0" id="findingsContainer">
+<!-- Finding 1: Superlatives -->
+<div class="finding-card bg-white border border-[#E5DFD3] rounded-2xl shadow-xs transition-all overflow-hidden hover:shadow-sm" data-finding-id="1" id="tour-card-finding-1">
+<button aria-expanded="false" class="finding-accordion-btn w-full p-4 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-[#FAF8F5]/80 transition-colors relative z-10" type="button">
+<div class="flex items-center gap-3.5 min-w-0">
+<span class="w-8 h-8 rounded-full bg-[#FAF8F5] text-[#57534E] flex items-center justify-center text-xs md:text-sm font-mono font-bold shrink-0 border border-[#E5DFD3]">01</span>
+<div class="truncate">
+<div class="flex items-center gap-2.5">
+<h4 class="text-[15.5px] md:text-[16.5px] font-bold text-[#1C1917] tracking-tight leading-tight">01 Discouraged Superlative Phrasing</h4>
+<span class="text-xs px-2.5 py-0.5 rounded-md bg-[#F5F2EB] text-[#57534E] font-mono font-semibold">Rule 01</span>
+</div>
+<p class="text-[13px] md:text-sm font-normal text-[#6b645b] leading-relaxed truncate mt-1">Unsubstantiated absolute claim flagged by brand guidelines</p>
+</div>
+</div>
+<div class="flex items-center gap-2.5 shrink-0">
+<span class="text-xs md:text-[13px] px-3 py-1 rounded-full bg-[#FFFBEB] text-[#92400E] font-bold border border-[#FDE68A]">Warning</span>
+<span class="accordion-chevron material-symbols-outlined text-[20px] text-[#78716C]">expand_more</span>
+</div>
+</button>
+<div class="finding-accordion-content px-5 pb-4 pt-3 border-t border-[#F5F2EB] space-y-3 relative z-10 hidden">
+<p class="text-[15px] font-medium text-[#1c1918] leading-relaxed py-1"><span class="text-slate-400 font-serif mr-1 text-base">“</span>...the <mark class="bg-amber-200/90 text-amber-950 px-1.5 py-0.5 rounded font-bold">ultimate all-in-one desk</mark> for remote professionals...<span class="text-slate-400 font-serif ml-1 text-base">”</span></p>
+<div class="flex items-center justify-between gap-3 pt-1 text-xs md:text-[13px]">
+<div class="flex items-center gap-1.5 min-w-0 text-[#6b645b] font-medium">
+<span class="material-symbols-outlined text-[17px] text-[#78716C] shrink-0">menu_book</span>
+<span class="truncate">LumaDesk Brand Ruleset §1</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="text-[#6b645b] font-medium hidden sm:inline">Suggested:</span>
+<span class="font-semibold text-[#1c1918] bg-[#F5F2EB] px-2.5 py-1 rounded-md border border-[#E5DFD3]">"dual-motor ergonomic workstation"</span>
+<button class="apply-fix-btn inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#1C1917] hover:bg-[#292524] text-white font-bold text-xs md:text-[13px] transition-colors cursor-pointer" data-replace="dual-motor ergonomic workstation" data-rule="1" data-target="the ultimate all-in-one desk" type="button">
+<span class="material-symbols-outlined text-[14px] text-[#C59B27]">auto_fix_high</span>
+<span class="">Apply Fix</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Finding 2: Lifetime Claim -->
+<div class="finding-card bg-white border border-[#E5DFD3] rounded-2xl shadow-xs transition-all overflow-hidden hover:shadow-sm" data-finding-id="2" id="tour-card-finding-2">
+<button aria-expanded="false" class="finding-accordion-btn w-full p-4 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-[#FAF8F5]/80 transition-colors relative z-10" type="button">
+<div class="flex items-center gap-3.5 min-w-0">
+<span class="w-8 h-8 rounded-full bg-[#FAF8F5] text-[#57534E] flex items-center justify-center text-xs md:text-sm font-mono font-bold shrink-0 border border-[#E5DFD3]">02</span>
+<div class="truncate">
+<div class="flex items-center gap-2.5">
+<h4 class="text-[15.5px] md:text-[16.5px] font-bold text-[#1C1917] tracking-tight leading-tight">02 Unsubstantiated Lifetime Claim</h4>
+<span class="text-xs px-2.5 py-0.5 rounded-md bg-[#F5F2EB] text-[#57534E] font-mono font-semibold">Rule 02</span>
+</div>
+<p class="text-[13px] md:text-sm font-normal text-[#6b645b] leading-relaxed truncate mt-1">Unqualified indestructible / lifetime guarantee terms</p>
+</div>
+</div>
+<div class="flex items-center gap-2.5 shrink-0">
+<span class="text-xs md:text-[13px] px-3 py-1 rounded-full bg-[#FFF1F2] text-[#9F1239] font-bold border border-[#FDE68A]/40">Prohibited</span>
+<span class="accordion-chevron material-symbols-outlined text-[20px] text-[#78716C]">expand_more</span>
+</div>
+</button>
+<div class="finding-accordion-content px-5 pb-4 pt-3 border-t border-[#F5F2EB] space-y-3 relative z-10 hidden">
+<p class="text-[15px] font-medium text-[#1c1918] leading-relaxed py-1"><span class="text-slate-400 font-serif mr-1 text-base">“</span>...backed by our <mark class="bg-rose-200/90 text-rose-950 px-1.5 py-0.5 rounded font-bold">100% indestructible lifetime guarantee</mark>.<span class="text-slate-400 font-serif ml-1 text-base">”</span></p>
+<div class="flex items-center justify-between gap-3 pt-1 text-xs md:text-[13px]">
+<div class="flex items-center gap-1.5 min-w-0 text-[#6b645b] font-medium">
+<span class="material-symbols-outlined text-[17px] text-[#78716C] shrink-0">gavel</span>
+<span class="truncate">LumaDesk Warranty Guidelines §2</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="text-[#6b645b] font-medium hidden sm:inline">Suggested:</span>
+<span class="font-semibold text-[#1c1918] bg-[#F5F2EB] px-2.5 py-1 rounded-md border border-[#E5DFD3]">"10-year comprehensive structural warranty"</span>
+<button class="apply-fix-btn inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#1C1917] hover:bg-[#292524] text-white font-bold text-xs md:text-[13px] transition-colors cursor-pointer" data-replace="10-year comprehensive structural warranty" data-rule="2" data-target="100% indestructible lifetime guarantee" type="button">
+<span class="material-symbols-outlined text-[14px] text-[#C59B27]">auto_fix_high</span>
+<span class="">Apply Fix</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Finding 3: Logistics Coverage Fact Conflict -->
+<div class="finding-card bg-white border border-[#E5DFD3] rounded-2xl shadow-xs transition-all overflow-hidden hover:shadow-sm" data-finding-id="3">
+<button aria-expanded="false" class="finding-accordion-btn w-full p-4 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-[#FAF8F5]/80 transition-colors relative z-10" type="button">
+<div class="flex items-center gap-3.5 min-w-0">
+<span class="w-8 h-8 rounded-full bg-[#FAF8F5] text-[#57534E] flex items-center justify-center text-xs md:text-sm font-mono font-bold shrink-0 border border-[#E5DFD3]">03</span>
+<div class="truncate">
+<div class="flex items-center gap-2.5">
+<h4 class="text-[15.5px] md:text-[16.5px] font-bold text-[#1C1917] tracking-tight leading-tight">03 Logistics Coverage Fact Conflict</h4>
+<span class="text-xs px-2.5 py-0.5 rounded-md bg-[#F5F2EB] text-[#57534E] font-mono font-semibold">Rule 03</span>
+</div>
+<p class="text-[13px] md:text-sm font-normal text-[#6b645b] leading-relaxed truncate mt-1">Unverified shipping destinations conflicting with operational matrix</p>
+</div>
+</div>
+<div class="flex items-center gap-2.5 shrink-0">
+<span class="text-xs md:text-[13px] px-3 py-1 rounded-full bg-[#FFFBEB] text-[#92400E] font-bold border border-[#FDE68A]">Warning</span>
+<span class="accordion-chevron material-symbols-outlined text-[20px] text-[#78716C]">expand_more</span>
+</div>
+</button>
+<div class="finding-accordion-content px-5 pb-4 pt-3 border-t border-[#F5F2EB] space-y-3 relative z-10 hidden">
+<p class="text-[15px] font-medium text-[#1c1918] leading-relaxed py-1"><span class="text-slate-400 font-serif mr-1 text-base">“</span>...LumaDesk <mark class="bg-amber-200/90 text-amber-950 px-1.5 py-0.5 rounded font-bold">ships free to Antarctica on standard tier</mark> without hidden cargo surcharges.<span class="text-slate-400 font-serif ml-1 text-base">”</span></p>
+<div class="flex items-center justify-between gap-3 pt-1 text-xs md:text-[13px]">
+<div class="flex items-center gap-1.5 min-w-0 text-[#6b645b] font-medium">
+<span class="material-symbols-outlined text-[17px] text-[#78716C] shrink-0">local_shipping</span>
+<span class="truncate">LumaDesk Logistics Policy §3</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="text-[#6b645b] font-medium hidden sm:inline">Suggested:</span>
+<span class="font-semibold text-[#1c1918] bg-[#F5F2EB] px-2.5 py-1 rounded-md border border-[#E5DFD3]">"ships free across the US and Canada"</span>
+<button class="apply-fix-btn inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#1C1917] hover:bg-[#292524] text-white font-bold text-xs md:text-[13px] transition-colors cursor-pointer" data-replace="ships free across the US and Canada" data-rule="3" data-target="ships free to Antarctica on standard tier" type="button">
+<span class="material-symbols-outlined text-[14px] text-[#C59B27]">auto_fix_high</span>
+<span class="">Apply Fix</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Finding 4: FTC Verification -->
+<div class="finding-card bg-white border border-[#E5DFD3] rounded-2xl shadow-xs transition-all overflow-hidden hover:shadow-sm" data-finding-id="4">
+<button aria-expanded="false" class="finding-accordion-btn w-full p-4 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-[#FAF8F5]/80 transition-colors relative z-10" type="button">
+<div class="flex items-center gap-3.5 min-w-0">
+<span class="w-8 h-8 rounded-full bg-[#FAF8F5] text-[#57534E] flex items-center justify-center text-xs md:text-sm font-mono font-bold shrink-0 border border-[#E5DFD3]">04</span>
+<div class="truncate">
+<div class="flex items-center gap-2.5">
+<h4 class="text-[15.5px] md:text-[16.5px] font-bold text-[#1C1917] tracking-tight leading-tight">04 FTC Commercial Disclosure Verified</h4>
+<span class="text-xs px-2.5 py-0.5 rounded-md bg-[#F5F2EB] text-[#57534E] font-mono font-semibold">Rule 04</span>
+</div>
+<p class="text-[13px] md:text-sm font-normal text-[#6b645b] leading-relaxed truncate mt-1">No match found for this rule (Required commercial disclosures present)</p>
+</div>
+</div>
+<div class="flex items-center gap-2.5 shrink-0">
+<span class="text-xs md:text-[13px] px-3 py-1 rounded-full bg-[#F0FDF4] text-[#166534] font-bold border border-[#BBF7D0]">Compliant</span>
+<span class="accordion-chevron material-symbols-outlined text-[20px] text-[#78716C]">expand_more</span>
+</div>
+</button>
+<div class="finding-accordion-content hidden px-5 pb-4 pt-3 border-t border-[#F5F2EB] space-y-3 relative z-10">
+<p class="text-[15px] font-medium text-[#1c1918] leading-relaxed py-1"><span class="text-slate-400 font-serif mr-1 text-base">“</span><mark class="bg-emerald-100 text-emerald-950 px-1.5 py-0.5 rounded font-bold">Disclosure: This promotion is sponsored by LumaDesk Innovations.</mark> All verified purchases include our official standard desk setup guide.<span class="text-slate-400 font-serif ml-1 text-base">”</span></p>
+<div class="flex items-center justify-between gap-3 pt-1 text-xs md:text-[13px]">
+<div class="flex items-center gap-1.5 text-[#6b645b] font-medium">
+<span class="material-symbols-outlined text-[17px] text-emerald-600">verified</span>
+<span class="">LumaDesk FTC Disclosures Policy §4</span>
+</div>
+<span class="font-mono text-xs font-bold text-emerald-800 bg-[#F0FDF4] px-3 py-1 rounded-full border border-[#BBF7D0]">Compliant Clear</span>
+</div>
+</div>
+</div>
+</div>
+<!-- BOTTOM DECISION DOCK (Tour Target Step 3) -->
+<section class="bg-white border border-[#E5DFD3] rounded-2xl p-4 md:p-5 shadow-xs space-y-3.5 flex-shrink-0 mt-3" id="verdictContainer">
+<div class="flex items-center justify-between pb-2.5 border-b border-[#F5F2EB] text-xs md:text-[13px] relative z-10">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[19px] text-[#C59B27]">gavel</span>
+<h4 class="text-[15px] md:text-[16px] font-bold text-[#1C1917] font-serif tracking-tight">Reviewer Verdict &amp; Seal</h4>
+</div>
+<span class="text-xs font-mono text-[#6b645b] font-semibold">Auditor: Brandon K. (#BK-884)</span>
+</div>
+<div class="grid grid-cols-3 gap-3 relative z-10" id="verdictRadiosContainer">
+<label class="relative flex flex-col items-center justify-center py-2.5 px-3 rounded-xl border border-[#E5DFD3] hover:border-[#16A34A] cursor-pointer bg-[#FAF8F5]/80 hover:bg-white text-center transition-all">
+<input class="sr-only peer" id="radioApproved" name="reviewDecision" type="radio" value="approved">
+<div class="peer-checked:border-[#16A34A] peer-checked:bg-white peer-checked:ring-2 peer-checked:ring-[#16A34A]/40 absolute inset-0 rounded-xl pointer-events-none transition-all"></div>
+<span class="relative z-10 text-[#166534] font-bold text-xs md:text-sm flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[17px]">check_circle</span> Approve
+            </span>
+<span class="relative z-10 text-[11px] md:text-xs text-[#6b645b] mt-0.5">Publish Ready</span>
+</label>
+<label class="relative flex flex-col items-center justify-center py-2.5 px-3 rounded-xl border border-[#E5DFD3] hover:border-[#F59E0B] cursor-pointer bg-[#FAF8F5]/80 hover:bg-white text-center transition-all" id="needsChangesCard">
+<input checked="" class="sr-only peer" id="radioRevision" name="reviewDecision" type="radio" value="revision">
+<div class="peer-checked:border-[#C59B27] peer-checked:bg-white peer-checked:ring-2 peer-checked:ring-[#C59B27]/40 absolute inset-0 rounded-xl pointer-events-none transition-all"></div>
+<span class="relative z-10 text-[#92400E] font-bold text-xs md:text-sm flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[17px]">edit_note</span> Needs Changes
+            </span>
+<span class="relative z-10 text-[11px] md:text-xs text-[#B45309] font-bold mt-0.5" id="recommendTag">Recommended</span>
+</label>
+<label class="relative flex flex-col items-center justify-center py-2.5 px-3 rounded-xl border border-[#E5DFD3] hover:border-[#E11D48] cursor-pointer bg-[#FAF8F5]/80 hover:bg-white text-center transition-all">
+<input class="sr-only peer" id="radioRejected" name="reviewDecision" type="radio" value="rejected">
+<div class="peer-checked:border-[#E11D48] peer-checked:bg-white peer-checked:ring-2 peer-checked:ring-[#E11D48]/40 absolute inset-0 rounded-xl pointer-events-none transition-all"></div>
+<span class="relative z-10 text-[#9F1239] font-bold text-xs md:text-sm flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[17px]">block</span> Reject
+            </span>
+<span class="relative z-10 text-[11px] md:text-xs text-[#6b645b] mt-0.5">Policy Breach</span>
+</label>
+</div>
+<div class="space-y-2 pt-1 relative z-10">
+<div class="flex items-center gap-2.5">
+<div class="relative flex-1">
+<input class="w-full px-4 py-2.5 text-xs md:text-[14px] font-normal text-[#1C1917] rounded-xl border border-[#E5DFD3] focus:border-[#C59B27] focus:ring-1 focus:ring-[#C59B27] outline-none transition bg-[#FAF8F5]/50 placeholder:text-[#8a8174]" id="reviewerNotes" placeholder="Writer instructions or decision rationale..." type="text" value="Please adjust warranty copy to specify standard 10-year frame and remove Antarctica shipping claim.">
+</div>
+<button class="inline-flex items-center justify-center gap-1.5 bg-[#1C1917] hover:bg-[#292524] text-white px-4 py-2.5 rounded-xl text-xs md:text-[13.5px] font-bold shadow-xs transition-colors whitespace-nowrap cursor-pointer" id="saveReceiptBtn" type="button">
+<span class="material-symbols-outlined text-[17px] text-[#C59B27]">save</span>
+<span class="" id="saveReceiptBtnText">Save Decision</span>
+</button>
+</div>
+<p class="text-xs md:text-[12.5px] text-[#6b645b] flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[15px] text-[#78716C]">info</span>
+<span class="">Decision logged to review audit trail. Content is not stored or published externally.</span>
+</p>
+</div>
+</section>
+</div>
+</div><div class="flex-1 flex-col min-h-0 overflow-y-auto space-y-4 custom-scrollbar py-1 hidden" id="viewAuditTrail">
+  <div class="bg-white rounded-2xl p-6 shadow-xs border border-[#E5DFD3] space-y-5">
+    <div class="flex items-center justify-between pb-4 border-b border-[#F5F2EB]">
+      <div>
+        <h2 class="text-xl font-bold font-serif text-[#1C1917]">Cryptographic Audit Trail</h2>
+        <p class="text-xs md:text-[13px] text-[#6b645b] mt-0.5">Chronological local-first verification log signed with cryptographic attestations.</p>
+      </div>
+      <button onclick="showReceiptToast('REC-LOG-2025-01')" class="px-3.5 py-1.5 rounded-xl bg-[#1C1917] hover:bg-[#292524] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs">
+        <span class="material-symbols-outlined text-[16px] text-[#C59B27]">verified</span>
+        <span class="">View Latest Certificate</span>
+      </button>
+    </div>
+    <div class="space-y-3">
+      <div class="p-4 rounded-xl bg-[#FAF8F5] border border-[#E5DFD3] flex items-center justify-between hover:bg-white transition cursor-pointer" onclick="showReceiptToast('REC-9942')">
+        <div class="flex items-center gap-3.5">
+          <span class="w-9 h-9 rounded-xl bg-white border border-[#E5DFD3] flex items-center justify-center text-[#166534] font-bold">
+            <span class="material-symbols-outlined text-[20px]">verified</span>
+          </span>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-mono font-bold text-xs text-[#1C1917]">PRM-2025-9942</span>
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#F0FDF4] text-[#166534]">Approved</span>
+            </div>
+            <p class="text-xs text-[#6b645b] mt-0.5">LumaDesk Pro Launch Campaign • Evaluated 4 Policies</p>
+          </div>
+        </div>
+        <div class="text-right text-xs">
+          <div class="font-mono text-[#1C1917] font-semibold">Today, 14:48 UTC</div>
+          <div class="text-[#78716C] mt-0.5">Auditor: Brandon K.</div>
+        </div>
+      </div>
+      <div class="p-4 rounded-xl bg-[#FAF8F5] border border-[#E5DFD3] flex items-center justify-between hover:bg-white transition cursor-pointer" onclick="showReceiptToast('REC-9938')">
+        <div class="flex items-center gap-3.5">
+          <span class="w-9 h-9 rounded-xl bg-white border border-[#E5DFD3] flex items-center justify-center text-[#92400E] font-bold">
+            <span class="material-symbols-outlined text-[20px]">edit_note</span>
+          </span>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-mono font-bold text-xs text-[#1C1917]">PRM-2025-9938</span>
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#FFFBEB] text-[#92400E]">Needs Changes</span>
+            </div>
+            <p class="text-xs text-[#6b645b] mt-0.5">Q1 Ergonomics Newsletter Blast • 2 Policy Discrepancies</p>
+          </div>
+        </div>
+        <div class="text-right text-xs">
+          <div class="font-mono text-[#1C1917] font-semibold">Yesterday, 18:22 UTC</div>
+          <div class="text-[#78716C] mt-0.5">Auditor: Brandon K.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="flex-1 flex-col min-h-0 overflow-y-auto space-y-4 custom-scrollbar py-1 hidden" id="viewActivePolicies">
+  <div class="bg-white rounded-2xl p-6 shadow-xs border border-[#E5DFD3] space-y-5">
+    <div class="flex items-center justify-between pb-4 border-b border-[#F5F2EB]">
+      <div>
+        <h2 class="text-xl font-bold font-serif text-[#1C1917]">LumaDesk Active Compliance Rulesets</h2>
+        <p class="text-xs md:text-[13px] text-[#6b645b] mt-0.5">Deterministic regex &amp; structural rule pipelines enforcing zero-retention brand compliance.</p>
+      </div>
+      <span class="px-3 py-1 rounded-full bg-[#F0FDF4] text-[#166534] font-mono text-xs font-bold border border-[#BBF7D0]">Engine v2.4.1 Active</span>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+      <div class="p-4 rounded-xl bg-[#FAF8F5] border border-[#E5DFD3] space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-[14px] text-[#1C1917]">01 Superlative Phrasing</span>
+          <span class="font-mono text-xs px-2 py-0.5 rounded bg-[#FFFBEB] text-[#92400E] font-semibold">Enforced</span>
+        </div>
+        <p class="text-xs text-[#57534E] leading-relaxed">Flags unsupported absolute claims like 'the ultimate', 'best-in-class', and 'indestructible' unless third-party backed.</p>
+      </div>
+      <div class="p-4 rounded-xl bg-[#FAF8F5] border border-[#E5DFD3] space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-[14px] text-[#1C1917]">02 Warranty &amp; Longevity</span>
+          <span class="font-mono text-xs px-2 py-0.5 rounded bg-[#FFF1F2] text-[#9F1239] font-semibold">Strict Prohibited</span>
+        </div>
+        <p class="text-xs text-[#57534E] leading-relaxed">Enforces exact legal phrasing for structural guarantees; mandates 10-year limit instead of perpetual lifetime claims.</p>
+      </div>
+      <div class="p-4 rounded-xl bg-[#FAF8F5] border border-[#E5DFD3] space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-[14px] text-[#1C1917]">03 Logistics &amp; Freight Boundaries</span>
+          <span class="font-mono text-xs px-2 py-0.5 rounded bg-[#FFFBEB] text-[#92400E] font-semibold">Enforced</span>
+        </div>
+        <p class="text-xs text-[#57534E] leading-relaxed">Validates delivery region promises against current freight operational dispatch matrix (North America tier).</p>
+      </div>
+      <div class="p-4 rounded-xl bg-[#FAF8F5] border border-[#E5DFD3] space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-[14px] text-[#1C1917]">04 FTC Endorsement Disclosures</span>
+          <span class="font-mono text-xs px-2 py-0.5 rounded bg-[#F0FDF4] text-[#166534] font-semibold">Mandatory Clear</span>
+        </div>
+        <p class="text-xs text-[#57534E] leading-relaxed">Ensures explicit, unambiguous disclosure of brand sponsorship and verified review material.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- BOTTOM RULES FOOTER BAR (Tour Target Step 4) -->
+<div class="bg-[#FBF9F5] border border-[#E5DFD3] rounded-xl px-4 md:px-5 py-2.5 shadow-xs flex items-center justify-between gap-3 text-xs md:text-[13px] flex-shrink-0" id="policyFooterDock">
+<div class="flex items-center gap-2.5 text-[#1C1917] font-medium font-serif relative z-10">
+<span class="material-symbols-outlined text-[18px] text-[#C59B27]">menu_book</span>
+<span class="font-bold text-xs md:text-[13.5px]">LumaDesk Brand Ruleset <span class="font-mono text-xs text-[#78716C] font-normal">v2.4.1</span></span>
+</div>
+<div class="hidden md:flex items-center gap-3.5 text-xs font-mono text-[#57534E] font-medium relative z-10">
+<span class="">01 Superlatives</span>
+<span class="text-[#d6cebf]">•</span>
+<span class="">02 Warranty</span>
+<span class="text-[#d6cebf]">•</span>
+<span class="">03 Logistics</span>
+<span class="text-[#d6cebf]">•</span>
+<span class="">04 Disclosures</span>
+</div>
+<div class="flex items-center gap-2 text-[#166534] text-xs md:text-[13px] font-bold relative z-10">
+<span class="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse"></span>
+<span class="font-mono text-xs">Matcher Active</span>
+</div>
+</div>
+</main>
+<!-- RESTORED INTERACTIVE GUIDED WALKTHROUGH OVERLAY & POPUP -->
+<!-- Backdrop has pointer-events-auto to capture background clicks, but the modal callout has higher z-index and explicit pointer-events-auto -->
+<div class="fixed inset-0 z-50 pointer-events-auto transition-opacity duration-200 hidden" id="guidedTourOverlay" style="display: none;"><!-- Backdrop -->
+<div class="absolute inset-0 bg-[#1c1917]/50 backdrop-blur-[3px] transition-opacity cursor-pointer z-40" id="tourBackdrop" onclick="closeTour()"></div>
+
+<!-- Spotlight Highlight Box with pulse ring and target crosshair beacon -->
+<div class="fixed pointer-events-none rounded-2xl border-2 border-[#C59B27] shadow-[0_0_0_9999px_rgba(28,25,23,0.52)] transition-all duration-300 ease-out z-40 ring-4 ring-[#C59B27]/40" id="tourSpotlightTarget" style="top: 0px; left: 0px; width: 16px; height: 16px;">
+  <!-- Animated Beacon Pin Pinpointing the target UI -->
+  <div class="absolute -top-3 -left-3 flex items-center justify-center pointer-events-none transition-all duration-300" id="tourTargetBeacon">
+    <span class="relative flex h-7 w-7 items-center justify-center">
+      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C59B27] opacity-75"></span>
+      <span class="relative inline-flex rounded-full h-5 w-5 bg-[#C59B27] border-2 border-white items-center justify-center text-white text-[10px] font-bold shadow-md"></span>
+    </span>
+  </div>
+</div>
+
+<!-- Anchored Tooltip Card with Dynamic Arrow Pointer -->
+<div class="fixed z-[60] pointer-events-auto transition-all duration-300 ease-out w-[92vw] max-w-[430px]" id="tourCalloutBox" style="top: 50px; left: 14px; width: 420px;">
+  <!-- Dynamic Arrow / Caret pointing toward the active feature -->
+  <div class="callout-arrow callout-arrow-left" id="tourCalloutArrow" style="left: -8px; top: 28px;"></div>
+  
+  <div class="bg-white rounded-2xl border border-[#D6CEBF] shadow-popover overflow-hidden flex flex-col text-[#1C1917] transition-transform duration-200 pointer-events-auto ring-1 ring-black/5" id="tourCard">
+    <!-- Top Sleek Accent Progress Meter -->
+    <div class="w-full bg-[#F5F2EB] h-1.5 relative overflow-hidden">
+      <div class="h-full bg-[#C59B27] transition-all duration-300 w-1/4" id="tourAutoProgressBar" style="width: 25%;"></div>
+    </div>
+    <!-- Header Bar -->
+    <div class="px-5 pt-4 pb-3 flex items-center justify-between relative z-10 border-b border-[#F5F2EB]">
+      <div class="flex items-center gap-2.5">
+        <span class="text-[11px] font-mono font-bold tracking-wide px-2.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A] flex items-center gap-1" id="tourStepBadge">Step 1 of 4</span>
+        <span class="text-xs font-semibold text-[#78716C] truncate max-w-[190px]" id="tourStepCategory">Sandbox &amp; Draft</span>
+      </div>
+      <button class="text-[#78716C] hover:text-[#1C1917] text-xs font-semibold px-2 py-1 rounded-md hover:bg-[#F5F2EB] transition-colors cursor-pointer flex items-center gap-1 active:scale-95" id="closeTourBtn" onclick="closeTour()" title="Dismiss tour" type="button">
+        <span class="">Skip</span>
+        <span class="material-symbols-outlined text-[15px]">close</span>
+      </button>
+    </div>
+    <!-- Content Body -->
+    <div class="px-5 py-4 space-y-3 relative z-10">
+      <div class="">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-[10px] font-mono uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-[#F5F2EB] text-[#775a00] border border-[#E5DFD3]" id="tourPointerLabel">Targeting: Draft Workspace</span>
+        </div>
+        <h3 class="text-lg md:text-[19px] font-bold text-[#1C1917] font-serif tracking-tight leading-snug" id="tourStepTitle">Pre-Publication Copy Sandbox</h3>
+        <p class="text-[13.5px] text-[#57534E] mt-1.5 leading-relaxed font-normal" id="tourStepDescription">Write or paste marketing copy into the deterministic draft editor. Checks ordinary paragraphs against active brand policies without storing drafts externally.</p>
+      </div>
+      <!-- Interactive Tip Item -->
+      <div class="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E5DFD3] text-xs md:text-[13px] text-[#78716C]">
+        <span class="material-symbols-outlined text-[#C59B27] text-[18px] shrink-0 mt-0.5">lightbulb</span>
+        <p class="text-[#57534E] leading-relaxed font-medium" id="tourStepActionTip">Try switching between Launch Copy, Social Ad, and Influencer presets or clicking Run Compliance Scan.</p>
+      </div>
+    </div>
+    <!-- Footer & Step Controls -->
+    <div class="px-5 py-3.5 bg-[#FAF8F5]/80 border-t border-[#E5DFD3] flex items-center justify-between relative z-10">
+      <div class="flex items-center gap-1.5" id="tourDotsContainer">
+        <button class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#1C1917] text-white cursor-pointer active:scale-95 transition-all" data-step="0" id="dot0" onclick="goToTourStep(0)" type="button">01</button>
+        <button class="px-2 py-0.5 rounded text-[11px] font-mono font-bold text-[#78716C] hover:text-[#1C1917] cursor-pointer active:scale-95 transition-all" data-step="1" id="dot1" onclick="goToTourStep(1)" type="button">02</button>
+        <button class="px-2 py-0.5 rounded text-[11px] font-mono font-bold text-[#78716C] hover:text-[#1C1917] cursor-pointer active:scale-95 transition-all" data-step="2" id="dot2" onclick="goToTourStep(2)" type="button">03</button>
+        <button class="px-2 py-0.5 rounded text-[11px] font-mono font-bold text-[#78716C] hover:text-[#1C1917] cursor-pointer active:scale-95 transition-all" data-step="3" id="dot3" onclick="goToTourStep(3)" type="button">04</button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="px-3 py-1.5 rounded-lg text-[#57534E] hover:text-[#1C1917] text-xs font-semibold cursor-pointer transition-colors active:scale-95 hidden" id="tourPrevBtn" onclick="prevTourStep()" type="button">Back</button>
+        <button class="px-3.5 py-1.5 rounded-xl bg-[#1C1917] hover:bg-[#292524] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs active:scale-95" id="tourNextBtn" onclick="nextTourStep()" type="button">
+          <span id="tourNextBtnText" class="">Next: Inspection Findings</span>
+          <span class="material-symbols-outlined text-[15px]" id="tourNextBtnIcon">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div></div>
+<!-- AUDIT CERTIFICATE MODAL -->
+<div class="fixed inset-0 bg-[#1c1917]/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden" id="receiptModal">
+<div class="bg-white rounded-2xl max-w-md w-full border border-[#D6CEBF] shadow-popover overflow-hidden relative">
+<div class="p-4 md:p-5 border-b border-[#E5DFD3] flex items-center justify-between bg-[#FAF8F5] relative z-10">
+<div class="flex items-center gap-2.5">
+<span class="w-7 h-7 rounded-lg bg-[#1C1917] text-white flex items-center justify-center text-xs font-bold">✓</span>
+<div>
+<h3 class="text-sm md:text-base font-bold text-[#1C1917]">Cryptographic Audit Seal</h3>
+<p class="text-[11px] font-mono text-[#78716C]">Immutable Pre-Publication Attestation</p>
+</div>
+</div>
+<button class="text-[#78716C] hover:text-[#1C1917] cursor-pointer p-1 rounded-md" id="closeModalBtn" onclick="document.getElementById('receiptModal').classList.add('hidden')">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="p-5 space-y-3.5 text-xs md:text-[13px] relative z-10">
+<div class="p-3.5 bg-[#FAF8F5] rounded-xl border border-[#E5DFD3] space-y-2.5">
+<div class="flex justify-between items-center pb-2 border-b border-[#E5DFD3] font-mono text-xs">
+<span class="text-[#78716C]">CERTIFICATE TOKEN</span>
+<span class="font-bold text-[#1C1917] bg-white px-2 py-0.5 rounded border border-[#D6CEBF]" id="modalTokenId">PRM-2025-9942</span>
+</div>
+<div class="grid grid-cols-2 gap-2 text-xs text-[#57534E]">
+<div>
+<span class="text-[#78716C] block text-[10.5px]">Verdict</span>
+<span class="font-bold text-[#166534] flex items-center gap-1 mt-0.5" id="modalVerdictStatus">
+<span class="material-symbols-outlined text-[15px]">check_circle</span> Approved
+            </span>
+</div>
+<div>
+<span class="text-[#78716C] block text-[10.5px]">Timestamp (UTC)</span>
+<span class="font-mono text-[#1C1917] font-semibold mt-0.5 block" id="modalTimestamp">2025-03-09 14:48:12 UTC</span>
+</div>
+<div>
+<span class="text-[#78716C] block text-[10.5px]">Auditor Signature</span>
+<span class="text-[#1C1917] font-semibold mt-0.5 block">Brandon K. (#BK-884)</span>
+</div>
+<div>
+<span class="text-[#78716C] block text-[10.5px]">Evaluated Policies</span>
+<span class="text-[#1C1917] font-semibold mt-0.5 block">4 Active Rules</span>
+</div>
+</div>
+</div>
+<div class="p-3 rounded-xl bg-[#1C1917] text-[#FAF8F5] font-mono text-[11px] space-y-1">
+<div class="flex justify-between text-[#d6cebf]">
+<span class="">SHA-256 DIGEST:</span>
+<span class="text-[#4ADE80] font-bold">VERIFIED</span>
+</div>
+<div class="break-all text-[10px] text-[#e5dfd3]">
+          e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        </div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="text-xs text-[#78716C]">Zero client data persisted.</span>
+<button class="px-3.5 py-1.5 bg-[#1C1917] hover:bg-[#292524] text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer" id="copyHashBtn">
+<span class="material-symbols-outlined text-[15px]">content_copy</span> Copy Token
+        </button>
+</div>
+</div>
+</div>
+</div><div id="signInModal" class="fixed inset-0 bg-[#1c1917]/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden"><div class="bg-white rounded-2xl max-w-md w-full border border-[#D6CEBF] shadow-popover overflow-hidden relative"><div class="p-4 md:p-5 border-b border-[#E5DFD3] flex items-center justify-between bg-[#FAF8F5] relative z-10"><div class="flex items-center gap-2.5"><div class="w-8 h-8 rounded-full bg-[#1C1917] text-[#FAF8F5] flex items-center justify-center font-bold text-xs">BK</div><div><h3 class="text-sm md:text-base font-bold text-[#1C1917] font-serif">Reviewer Sign In &amp; Authentication</h3><p class="text-[11px] font-mono text-[#78716C]">Zero-Retention Local Authenticator • Keyring Active</p></div></div><button onclick="toggleSignInModal()" class="text-[#78716C] hover:text-[#1C1917] cursor-pointer p-1 rounded-md"><span class="material-symbols-outlined text-[20px]">close</span></button></div><div class="p-5 space-y-4 text-xs md:text-[13px] relative z-10"><div class="p-3.5 bg-[#FAF8F5] rounded-xl border border-[#E5DFD3] space-y-2"><div class="flex items-center justify-between"><span class="text-[#78716C] font-mono text-xs">ACTIVE AUDITOR CREDENTIAL</span><span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0]">Verified Session</span></div><div class="text-[#1C1917] font-bold text-sm">Brandon K. <span class="text-xs font-normal text-[#6b645b]">(ID: #BK-884)</span></div><div class="text-xs text-[#57534E]">LumaDesk Senior Compliance Officer • Regulatory Desk</div></div><form onsubmit="event.preventDefault(); toggleSignInModal();" class="space-y-3"><div class="space-y-1"><label class="block text-xs font-semibold text-[#1C1917]">Officer Key ID / Email</label><input type="email" value="brandon.k@lumadesk.internal" class="w-full px-3.5 py-2 text-xs rounded-xl border border-[#E5DFD3] bg-white outline-none text-[#1C1917] focus:border-[#C59B27] focus:ring-1 focus:ring-[#C59B27]"></div><div class="space-y-1"><label class="block text-xs font-semibold text-[#1C1917]">Passphrase / HSM Enclave Key</label><input type="password" value="••••••••••••••••" class="w-full px-3.5 py-2 text-xs rounded-xl border border-[#E5DFD3] bg-white outline-none text-[#1C1917] focus:border-[#C59B27] focus:ring-1 focus:ring-[#C59B27]"><p class="text-[11px] text-[#78716C]">Passphrases decrypt cryptographic attestations in local web assembly sandbox.</p></div><div class="flex items-center justify-between pt-1 text-xs"><label class="flex items-center gap-1.5 cursor-pointer text-[#57534E]"><input type="checkbox" checked="" class="rounded border-[#D6CEBF] text-[#C59B27] focus:ring-[#C59B27]"> Remember local seat</label><a href="#" onclick="alert('Reset request dispatched to compliance administrator.'); return false;" class="text-[#C59B27] hover:underline font-semibold">Need re-provisioning?</a></div><div class="flex items-center justify-end gap-2 pt-2 border-t border-[#F5F2EB]"><button type="button" onclick="toggleSignInModal()" class="px-3.5 py-2 rounded-xl border border-[#D6CEBF] bg-[#FAF8F5] hover:bg-white text-[#1C1917] text-xs font-bold cursor-pointer">Cancel</button><button type="submit" class="px-4 py-2 rounded-xl bg-[#1C1917] hover:bg-[#292524] text-white text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-xs"><span class="material-symbols-outlined text-[15px] text-[#C59B27]">verified_user</span><span class="">Authenticate Session</span></button></div></form></div></div></div>
+<!-- SCRIPTS WITH GLOBALLY EXPOSED TOUR ENGINE AND ROBUST CLICK HANDLERS -->
+<script>
+  // Tour definitions accessible globally
+  const tourSteps = [
+    {
+      step: 0,
+      targetId: 'draft-workspace',
+      preferredSide: 'right',
+      badge: "Step 1 of 4",
+      category: "Sandbox & Draft",
+      title: "Pre-Publication Copy Sandbox",
+      desc: "Write or paste marketing copy into the deterministic draft editor. Checks ordinary paragraphs against active brand policies without storing drafts externally.",
+      actionTip: "Try switching between Launch Copy, Social Ad, and Influencer presets or clicking Run Compliance Scan.",
+      actionText: "Next: Inspection Findings"
+    },
+    {
+      step: 1,
+      targetId: 'findingsSummaryBar',
+      preferredSide: 'left',
+      badge: "Step 2 of 4",
+      category: "Inspection Findings",
+      title: "Real-Time Inspection Findings",
+      desc: "Each card pinpoints policy breaches (FTC superlatives, warranty scope, freight matrix) with pre-approved one-click replacements.",
+      actionTip: "Click any finding header to expand inspection evidence, or click 'Apply Fix' directly on the suggested substitute.",
+      actionText: "Next: Reviewer Verdict"
+    },
+    {
+      step: 2,
+      targetId: 'decision-receipts',
+      preferredSide: 'top',
+      badge: "Step 3 of 4",
+      category: "Reviewer Seal",
+      title: "Reviewer Verdict & Seal",
+      desc: "Set reviewer judgment (Approve, Needs Changes, Reject) and sign off with tamper-proof cryptographic attestation.",
+      actionTip: "When all 4 rules pass 100%, Approve unlocks automatically and generates a tamper-proof sign-off token.",
+      actionText: "Next: Policy Ruleset"
+    },
+    {
+      step: 3,
+      targetId: 'brand-rules',
+      preferredSide: 'top',
+      badge: "Step 4 of 4",
+      category: "Policy Ruleset",
+      title: "Active Policy Engine & Ruleset",
+      desc: "Live policy manifests (Superlatives, Warranty, Logistics, and FTC Strict) maintain sub-30ms deterministic verification across all copy.",
+      actionTip: "You're all set! Re-open this walkthrough anytime by tapping 'Guide' in the top header.",
+      actionText: "Finish Tour"
+    }
+  ];
+
+  let currentTourStep = 0;
+
+  function positionTourElements(targetEl, preferredSide) {
+    const tourSpotlightTarget = document.getElementById('tourSpotlightTarget');
+    const tourCalloutBox = document.getElementById('tourCalloutBox');
+    const tourCalloutArrow = document.getElementById('tourCalloutArrow');
+    if (!targetEl || !tourSpotlightTarget || !tourCalloutBox) return;
+
+    const rect = targetEl.getBoundingClientRect();
+    const pad = 8;
+
+    tourSpotlightTarget.style.top = `${Math.max(0, rect.top - pad)}px`;
+    tourSpotlightTarget.style.left = `${Math.max(0, rect.left - pad)}px`;
+    tourSpotlightTarget.style.width = `${rect.width + (pad * 2)}px`;
+    tourSpotlightTarget.style.height = `${rect.height + (pad * 2)}px`;
+
+    const calloutWidth = Math.min(window.innerWidth * 0.92, 420);
+    const calloutHeight = 270;
+    const margin = 14;
+
+    let calloutX = 0;
+    let calloutY = 0;
+    let arrowClass = 'callout-arrow-left';
+    let arrowStyle = '';
+
+    const winWidth = window.innerWidth;
+    const winHeight = window.innerHeight;
+
+    let side = preferredSide;
+    if (winWidth < 1024) {
+      if (rect.top > calloutHeight + margin + 40) {
+        side = 'top';
+      } else {
+        side = 'bottom';
+      }
+    }
+
+    if (side === 'bottom') {
+      calloutY = Math.min(winHeight - calloutHeight - 16, rect.bottom + margin);
+      calloutX = Math.max(12, Math.min(winWidth - calloutWidth - 12, rect.left + (rect.width / 2) - (calloutWidth / 2)));
+      arrowClass = 'callout-arrow-top';
+      const arrowOffset = Math.max(20, Math.min(calloutWidth - 28, (rect.left + rect.width / 2) - calloutX));
+      arrowStyle = `left: ${arrowOffset}px; top: -8px;`;
+    } else if (side === 'top') {
+      calloutY = Math.max(16, rect.top - calloutHeight - margin);
+      calloutX = Math.max(12, Math.min(winWidth - calloutWidth - 12, rect.left + (rect.width / 2) - (calloutWidth / 2)));
+      arrowClass = 'callout-arrow-bottom';
+      const arrowOffset = Math.max(20, Math.min(calloutWidth - 28, (rect.left + rect.width / 2) - calloutX));
+      arrowStyle = `left: ${arrowOffset}px; bottom: -8px;`;
+    } else if (side === 'right') {
+      calloutX = rect.right + margin;
+      if (calloutX + calloutWidth > winWidth - 12) {
+        calloutX = Math.max(12, winWidth - calloutWidth - 16);
+        calloutY = Math.max(50, rect.top + 10);
+        arrowClass = 'callout-arrow-left';
+        arrowStyle = `left: -8px; top: 28px;`;
+      } else {
+        calloutY = Math.max(50, Math.min(winHeight - calloutHeight - 20, rect.top + 10));
+        arrowClass = 'callout-arrow-left';
+        arrowStyle = `left: -8px; top: 28px;`;
+      }
+    } else if (side === 'left') {
+      calloutX = Math.max(12, rect.left - calloutWidth - margin);
+      calloutY = Math.max(50, Math.min(winHeight - calloutHeight - 20, rect.top + 10));
+      arrowClass = 'callout-arrow-right';
+      arrowStyle = `right: -8px; top: 28px;`;
+    }
+
+    calloutX = Math.max(10, Math.min(winWidth - calloutWidth - 10, calloutX));
+    calloutY = Math.max(10, Math.min(winHeight - calloutHeight - 10, calloutY));
+
+    tourCalloutBox.style.width = `${calloutWidth}px`;
+    tourCalloutBox.style.left = `${calloutX}px`;
+    tourCalloutBox.style.top = `${calloutY}px`;
+
+    if (tourCalloutArrow) {
+      tourCalloutArrow.className = `callout-arrow ${arrowClass}`;
+      tourCalloutArrow.style.cssText = arrowStyle;
+    }
+  }
+
+  function renderTourStep(index) {
+    if (index < 0 || index >= tourSteps.length) return;
+    currentTourStep = index;
+    const data = tourSteps[index];
+
+    const targetElement = document.getElementById(data.targetId);
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      setTimeout(() => positionTourElements(targetElement, data.preferredSide), 40);
+    }
+
+    const badge = document.getElementById('tourStepBadge');
+    const category = document.getElementById('tourStepCategory');
+    const title = document.getElementById('tourStepTitle');
+    const desc = document.getElementById('tourStepDescription');
+    const actionTip = document.getElementById('tourStepActionTip');
+    const nextBtnText = document.getElementById('tourNextBtnText');
+    const nextBtnIcon = document.getElementById('tourNextBtnIcon');
+    const prevBtn = document.getElementById('tourPrevBtn');
+    const nextBtn = document.getElementById('tourNextBtn');
+    const progressBar = document.getElementById('tourAutoProgressBar');
+
+    if (badge) badge.textContent = data.badge;
+    if (category) category.textContent = data.category;
+    if (title) title.textContent = data.title;
+    if (desc) desc.textContent = data.desc;
+    if (actionTip) actionTip.textContent = data.actionTip;
+    if (nextBtnText) nextBtnText.textContent = data.actionText;
+
+    if (progressBar) {
+      const progressPercent = ((index + 1) / tourSteps.length) * 100;
+      progressBar.style.width = `${progressPercent}%`;
+    }
+
+    if (prevBtn) {
+      if (index === 0) {
+        prevBtn.classList.add('hidden');
+      } else {
+        prevBtn.classList.remove('hidden');
+      }
+    }
+
+    if (nextBtn && nextBtnIcon) {
+      if (index === tourSteps.length - 1) {
+        nextBtnIcon.textContent = 'check';
+        nextBtn.className = 'px-3.5 py-1.5 rounded-xl bg-[#775a00] hover:bg-[#5a4300] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs active:scale-95';
+      } else {
+        nextBtnIcon.textContent = 'arrow_forward';
+        nextBtn.className = 'px-3.5 py-1.5 rounded-xl bg-[#1C1917] hover:bg-[#292524] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs active:scale-95';
+      }
+    }
+
+    for (let i = 0; i < 4; i++) {
+      const dot = document.getElementById(`dot${i}`);
+      if (dot) {
+        if (i === index) {
+          dot.className = 'px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#1C1917] text-white cursor-pointer active:scale-95 transition-all';
+        } else {
+          dot.className = 'px-2 py-0.5 rounded text-[11px] font-mono font-bold text-[#78716C] hover:text-[#1C1917] cursor-pointer active:scale-95 transition-all';
+        }
+      }
+    }
+  }
+
+  function goToTourStep(step) {
+    renderTourStep(step);
+  }
+
+  function nextTourStep() {
+    if (currentTourStep >= tourSteps.length - 1) {
+      closeTour();
+    } else {
+      renderTourStep(currentTourStep + 1);
+    }
+  }
+
+  function prevTourStep() {
+    if (currentTourStep > 0) {
+      renderTourStep(currentTourStep - 1);
+    }
+  }
+
+  function openTour() {
+    const overlay = document.getElementById('guidedTourOverlay');
+    if (overlay) overlay.classList.remove('hidden');
+    renderTourStep(0);
+  }
+
+  function closeTour() {
+    const overlay = document.getElementById('guidedTourOverlay');
+    if (overlay) overlay.classList.add('hidden');
+  }
+
+  function showReceiptToast(id) {
+    const modal = document.getElementById('receiptModal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Render initial tour step 0
+    renderTourStep(0);
+
+    // DRAFT & EDITOR INTERACTIONS
+    const draftTextarea = document.getElementById('draftText');
+    const wordCountBadge = document.getElementById('wordCountBadge');
+    const charCountBadge = document.getElementById('charCountBadge');
+    const checkDraftBtn = document.getElementById('checkDraftBtn');
+    const autoFixAllBtn = document.getElementById('autoFixAllBtn');
+    const undoFixBtn = document.getElementById('undoFixBtn');
+    const diffBanner = document.getElementById('diffBanner');
+    const resetDraftBtn = document.getElementById('resetDraftBtn');
+    const fixToast = document.getElementById('fixToast');
+    const scoreIndicator = document.getElementById('scoreIndicator');
+    const statusSubtitle = document.getElementById('statusSubtitle');
+    const bannerIssuesChip = document.getElementById('bannerIssuesChip');
+    const bannerIssuesText = document.getElementById('bannerIssuesText');
+    const saveReceiptBtn = document.getElementById('saveReceiptBtn');
+    const receiptModal = document.getElementById('receiptModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const copyHashBtn = document.getElementById('copyHashBtn');
+    const radioApproved = document.getElementById('radioApproved');
+    const radioRevision = document.getElementById('radioRevision');
+    const reviewerNotes = document.getElementById('reviewerNotes');
+
+    const sampleCopy1 = `Introducing the LumaDesk Pro: the ultimate all-in-one desk for remote professionals seeking flawless ergonomics. 
+
+Engineered with dual high-torque whisper motors and aerospace grade aluminum, every desk comes backed by our 100% indestructible lifetime guarantee. Regardless of where work takes you, LumaDesk ships free to Antarctica on standard tier without hidden cargo surcharges.
+
+Disclosure: This promotion is sponsored by LumaDesk Innovations. All verified purchases include our official standard desk setup guide.`;
+
+    const sampleCopy2 = `Upgrade your room with the LumaDesk Pro! It is the ultimate standing desk ever built with a lifetime guarantee that never fails. Ships free everywhere on earth including Antarctica. 
+
+Disclosure: Sponsored by LumaDesk.`;
+
+    const sampleCopy3 = `Hey guys, thrilled to partner with LumaDesk! This is without doubt the ultimate all-in-one desk. Fully backed by a 100% indestructible lifetime guarantee. Grab yours today with free ground shipping. 
+
+Disclosure: This promotion is sponsored by LumaDesk Innovations.`;
+
+    let originalStateCopy = sampleCopy1;
+
+    function updateCounts() {
+      if (!draftTextarea) return;
+      const text = draftTextarea.value.trim();
+      const chars = draftTextarea.value.length;
+      const words = text ? text.split(/\s+/).length : 0;
+      if (wordCountBadge) wordCountBadge.textContent = `${words} words`;
+      if (charCountBadge) charCountBadge.textContent = `${chars} characters`;
+    }
+
+    if (draftTextarea) {
+      draftTextarea.addEventListener('input', updateCounts);
+      updateCounts();
+    }
+
+    function flashToast(msg) {
+      if (!fixToast) return;
+      if (msg) fixToast.querySelector('span:last-child').textContent = msg;
+      fixToast.classList.remove('hidden');
+      fixToast.classList.add('flex');
+      setTimeout(() => {
+        fixToast.classList.add('hidden');
+        fixToast.classList.remove('flex');
+      }, 1800);
+    }
+
+    document.querySelectorAll('.apply-fix-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = btn.getAttribute('data-target');
+        const replacement = btn.getAttribute('data-replace');
+        
+        if (draftTextarea && draftTextarea.value.includes(target)) {
+          draftTextarea.value = draftTextarea.value.replace(target, replacement);
+          updateCounts();
+          flashToast("Replaced phrase");
+          
+          btn.innerHTML = `<span class="material-symbols-outlined text-[13px]">done</span> Fixed`;
+          btn.classList.remove('bg-[#1C1917]', 'hover:bg-[#292524]');
+          btn.classList.add('bg-[#E5DFD3]', 'text-[#78716C]', 'cursor-default');
+          btn.disabled = true;
+          
+          recalculateScore();
+        } else {
+          flashToast("Phrase already updated");
+        }
+      });
+    });
+
+    if (autoFixAllBtn) {
+      autoFixAllBtn.addEventListener('click', () => {
+        const original = autoFixAllBtn.innerHTML;
+        autoFixAllBtn.innerHTML = `
+          <span class="material-symbols-outlined text-[16px] animate-spin">sync</span>
+          <span>Auto-Fixing...</span>
+        `;
+        autoFixAllBtn.disabled = true;
+
+        setTimeout(() => {
+          if (draftTextarea) {
+            let currentText = draftTextarea.value;
+            currentText = currentText.replace("the ultimate all-in-one desk", "dual-motor ergonomic workstation");
+            currentText = currentText.replace("100% indestructible lifetime guarantee", "10-year comprehensive structural warranty");
+            currentText = currentText.replace("ships free to Antarctica on standard tier", "ships free across the US and Canada");
+            draftTextarea.value = currentText;
+          }
+
+          updateCounts();
+          if (diffBanner) {
+            diffBanner.classList.remove('hidden');
+            diffBanner.classList.add('flex');
+          }
+
+          if (scoreIndicator) {
+            scoreIndicator.textContent = '4/4';
+            scoreIndicator.className = 'flex items-center justify-center w-12 h-12 rounded-xl bg-[#F0FDF4] text-[#166534] font-mono font-bold text-base shrink-0 border border-[#BBF7D0] shadow-xs';
+          }
+          if (statusSubtitle) statusSubtitle.textContent = 'All 4 policies passed. Draft is ready for sign-off.';
+
+          if (bannerIssuesChip) bannerIssuesChip.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0] font-bold text-xs md:text-[13px]';
+          if (bannerIssuesText) bannerIssuesText.textContent = 'All Issues Cleared';
+
+          if (radioApproved) radioApproved.checked = true;
+          if (reviewerNotes) reviewerNotes.value = 'Auto-remediation verified: Softened superlatives, limited warranty to 10y, regional shipping bounds set.';
+
+          document.querySelectorAll('.apply-fix-btn').forEach(b => {
+            b.innerHTML = `<span class="material-symbols-outlined text-[13px]">done</span> Fixed`;
+            b.classList.remove('bg-[#1C1917]', 'hover:bg-[#292524]');
+            b.classList.add('bg-[#E5DFD3]', 'text-[#78716C]');
+            b.disabled = true;
+          });
+
+          autoFixAllBtn.innerHTML = `
+            <span class="material-symbols-outlined text-[16px] text-[#16A34A]">check_circle</span>
+            <span>Remediated</span>
+          `;
+          flashToast("All 3 Violations Resolved");
+        }, 350);
+      });
+    }
+
+    if (undoFixBtn) {
+      undoFixBtn.addEventListener('click', () => {
+        if (draftTextarea) draftTextarea.value = originalStateCopy;
+        updateCounts();
+        if (diffBanner) {
+          diffBanner.classList.add('hidden');
+          diffBanner.classList.remove('flex');
+        }
+        
+        if (scoreIndicator) {
+          scoreIndicator.textContent = '3/4';
+          scoreIndicator.className = 'flex items-center justify-center w-12 h-12 rounded-xl bg-[#FAF8F5] text-[#92400E] font-mono font-bold text-base shrink-0 border border-[#E5DFD3] shadow-xs';
+        }
+        if (statusSubtitle) statusSubtitle.textContent = '4 rules evaluated';
+
+        if (bannerIssuesChip) bannerIssuesChip.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A] font-bold text-xs md:text-[13px]';
+        if (bannerIssuesText) bannerIssuesText.textContent = '3 Policy Flags';
+
+        if (radioRevision) radioRevision.checked = true;
+        if (reviewerNotes) reviewerNotes.value = 'Please adjust warranty copy to specify standard 10-year frame and remove Antarctica shipping claim.';
+
+        document.querySelectorAll('.apply-fix-btn').forEach(b => {
+          b.innerHTML = `<span class="material-symbols-outlined text-[14px] text-[#C59B27]">auto_fix_high</span> Apply Fix`;
+          b.classList.add('bg-[#1C1917]', 'hover:bg-[#292524]', 'text-white');
+          b.classList.remove('bg-[#E5DFD3]', 'text-[#78716C]');
+          b.disabled = false;
+        });
+
+        if (autoFixAllBtn) {
+          autoFixAllBtn.innerHTML = `
+            <span class="material-symbols-outlined text-[18px] text-[#C59B27]">auto_fix_high</span>
+            <span>1-Click Auto-Fix</span>
+          `;
+          autoFixAllBtn.disabled = false;
+        }
+      });
+    }
+
+    function recalculateScore() {
+      if (!draftTextarea) return;
+      const text = draftTextarea.value;
+      let issues = 0;
+      if (text.includes("the ultimate") || text.includes("ultimate")) issues++;
+      if (text.includes("indestructible") || text.includes("lifetime")) issues++;
+      if (text.includes("Antarctica")) issues++;
+
+      if (issues === 0) {
+        if (scoreIndicator) {
+          scoreIndicator.textContent = '4/4';
+          scoreIndicator.className = 'flex items-center justify-center w-12 h-12 rounded-xl bg-[#F0FDF4] text-[#166534] font-mono font-bold text-base shrink-0 border border-[#BBF7D0] shadow-xs';
+        }
+        if (radioApproved) radioApproved.checked = true;
+        if (bannerIssuesChip) bannerIssuesChip.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0] font-bold text-xs md:text-[13px]';
+        if (bannerIssuesText) bannerIssuesText.textContent = 'All Issues Cleared';
+      } else {
+        const passed = 4 - issues;
+        if (scoreIndicator) scoreIndicator.textContent = `${passed}/4`;
+        if (bannerIssuesText) bannerIssuesText.textContent = `${issues} Policy Flags`;
+      }
+    }
+
+    if (resetDraftBtn) resetDraftBtn.addEventListener('click', () => undoFixBtn && undoFixBtn.click());
+
+    if (checkDraftBtn) {
+      checkDraftBtn.addEventListener('click', () => {
+        const originalHtml = checkDraftBtn.innerHTML;
+        checkDraftBtn.innerHTML = `
+          <span class="material-symbols-outlined text-[16px] animate-spin">refresh</span>
+          <span>Scanning 4 Rules...</span>
+        `;
+        checkDraftBtn.disabled = true;
+
+        setTimeout(() => {
+          checkDraftBtn.innerHTML = originalHtml;
+          checkDraftBtn.disabled = false;
+          flashToast("Scan Complete • 24ms");
+        }, 300);
+      });
+    }
+
+    const pBtn1 = document.getElementById('presetBtn1');
+    const pBtn2 = document.getElementById('presetBtn2');
+    const pBtn3 = document.getElementById('presetBtn3');
+
+    function setActivePresetBtn(activeBtn) {
+      [pBtn1, pBtn2, pBtn3].forEach(b => {
+        if (b) b.className = 'px-2.5 py-1 rounded-md text-[#57534E] hover:text-[#1C1917] font-semibold transition-colors cursor-pointer text-xs';
+      });
+      if (activeBtn) activeBtn.className = 'px-2.5 py-1 rounded-md bg-white text-[#1C1917] font-bold shadow-xs transition-colors cursor-pointer text-xs';
+    }
+
+    if (pBtn1) pBtn1.addEventListener('click', () => {
+      draftTextarea.value = sampleCopy1;
+      originalStateCopy = sampleCopy1;
+      setActivePresetBtn(pBtn1);
+      if (undoFixBtn) undoFixBtn.click();
+    });
+
+    if (pBtn2) pBtn2.addEventListener('click', () => {
+      draftTextarea.value = sampleCopy2;
+      originalStateCopy = sampleCopy2;
+      setActivePresetBtn(pBtn2);
+      if (undoFixBtn) undoFixBtn.click();
+    });
+
+    if (pBtn3) pBtn3.addEventListener('click', () => {
+      draftTextarea.value = sampleCopy3;
+      originalStateCopy = sampleCopy3;
+      setActivePresetBtn(pBtn3);
+      if (undoFixBtn) undoFixBtn.click();
+    });
+
+    function showReceiptModal(tokenId, status) {
+      const tokenEl = document.getElementById('modalTokenId');
+      const statusEl = document.getElementById('modalVerdictStatus');
+      if (tokenEl) tokenEl.textContent = tokenId || "PRM-2025-9942";
+      if (statusEl && status) {
+        statusEl.innerHTML = `
+          <span class="material-symbols-outlined text-[15px]">check_circle</span> ${status}
+        `;
+      }
+      if (receiptModal) receiptModal.classList.remove('hidden');
+    }
+
+    if (saveReceiptBtn) {
+      saveReceiptBtn.addEventListener('click', () => {
+        const originalText = saveReceiptBtn.innerHTML;
+        saveReceiptBtn.innerHTML = `
+          <span class="material-symbols-outlined text-[16px] animate-spin">sync</span>
+          <span>Signing...</span>
+        `;
+        saveReceiptBtn.disabled = true;
+
+        setTimeout(() => {
+          saveReceiptBtn.innerHTML = originalText;
+          saveReceiptBtn.disabled = false;
+          const isApproved = radioApproved && radioApproved.checked;
+          const status = isApproved ? "Approved (Clean)" : "Needs Changes Logged";
+          showReceiptModal("PRM-AUDIT-" + Math.floor(1000 + Math.random() * 9000), status);
+        }, 350);
+      });
+    }
+
+    if (closeModalBtn) closeModalBtn.addEventListener('click', () => receiptModal.classList.add('hidden'));
+    if (receiptModal) {
+      receiptModal.addEventListener('click', (e) => {
+        if (e.target === receiptModal) receiptModal.classList.add('hidden');
+      });
+    }
+
+    if (copyHashBtn) {
+      copyHashBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+        copyHashBtn.innerHTML = `<span class="material-symbols-outlined text-[14px]">done</span> Copied`;
+        setTimeout(() => {
+          copyHashBtn.innerHTML = `<span class="material-symbols-outlined text-[14px]">content_copy</span> Copy Token`;
+        }, 1500);
+      });
+    }
+
+    const shareReviewBtn = document.getElementById('shareReviewBtn');
+    if (shareReviewBtn) {
+      shareReviewBtn.addEventListener('click', () => {
+        flashToast("Review link copied to clipboard");
+      });
+    }
+
+    // FINDING ACCORDION FUNCTIONALITY
+    const cards = document.querySelectorAll('.finding-card');
+    const expandAllBtn = document.getElementById('expandAllBtn');
+    const collapseAllBtn = document.getElementById('collapseAllBtn');
+
+    function toggleCard(card, shouldOpen) {
+      const btn = card.querySelector('.finding-accordion-btn');
+      const content = card.querySelector('.finding-accordion-content');
+      const icon = card.querySelector('.accordion-chevron');
+      if (!btn || !content || !icon) return;
+
+      const isOpen = shouldOpen !== undefined ? shouldOpen : content.classList.contains('hidden');
+
+      if (isOpen) {
+        content.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+        icon.textContent = 'expand_less';
+      } else {
+        content.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+        icon.textContent = 'expand_more';
+      }
+    }
+
+    cards.forEach(card => {
+      const btn = card.querySelector('.finding-accordion-btn');
+      if (btn) {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleCard(card);
+        });
+      }
+    });
+
+    if (expandAllBtn) expandAllBtn.addEventListener('click', () => cards.forEach(c => toggleCard(c, true)));
+    if (collapseAllBtn) collapseAllBtn.addEventListener('click', () => cards.forEach(c => toggleCard(c, false)));
+
+    window.addEventListener('resize', () => {
+      const overlay = document.getElementById('guidedTourOverlay');
+      if (overlay && !overlay.classList.contains('hidden')) {
+        const stepData = tourSteps[currentTourStep];
+        const el = document.getElementById(stepData.targetId);
+        if (el) positionTourElements(el, stepData.preferredSide);
+      }
+    });
+  });
+</script>
+
+
+
+
+
+
+<script>
+  function switchMainView(view) {
+    const studio = document.getElementById('viewDraftStudio');
+    const audit = document.getElementById('viewAuditTrail');
+    const policies = document.getElementById('viewActivePolicies');
+    const tabStudio = document.getElementById('navTabStudio');
+    const tabAudit = document.getElementById('navTabAudit');
+    const tabPolicies = document.getElementById('navTabPolicies');
+    const title = document.getElementById('currentViewTitle');
+    const badge = document.getElementById('currentViewBadge');
+    const subtitle = document.getElementById('currentViewSubtitle');
+    const tourOverlay = document.getElementById('guidedTourOverlay');
+
+    const activeClass = 'nav-tab-btn bg-white text-[#1C1917] font-semibold text-[13px] px-3.5 py-1.5 rounded-lg shadow-xs flex items-center gap-1.5 border border-[#E5DFD3] transition-all cursor-pointer';
+    const inactiveClass = 'nav-tab-btn text-[#57534E] hover:text-[#1C1917] font-semibold text-[13px] px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 hover:bg-white/70 cursor-pointer';
+
+    [tabStudio, tabAudit, tabPolicies].forEach(t => { if(t) t.className = inactiveClass; });
+    [studio, audit, policies].forEach(v => { if(v) { v.classList.add('hidden'); v.classList.remove('flex'); } });
+
+    if (view === 'studio') {
+      if (studio) { studio.classList.remove('hidden'); }
+      if (tabStudio) tabStudio.className = activeClass;
+      if (title) title.textContent = 'Deterministic Copy Review';
+      if (badge) badge.textContent = 'Pre-Publication';
+      if (subtitle) subtitle.textContent = 'Verifying copy against 4 LumaDesk policies with local zero-retention inspection.';
+    } else if (view === 'audit') {
+      if (audit) { audit.classList.remove('hidden'); audit.classList.add('flex'); }
+      if (tabAudit) tabAudit.className = activeClass;
+      if (title) title.textContent = 'Compliance Audit Trail';
+      if (badge) badge.textContent = 'Ledger Sealed';
+      if (subtitle) subtitle.textContent = 'Cryptographic sign-offs, reviewer receipts, and non-repudiation verification.';
+      if (tourOverlay) tourOverlay.classList.add('hidden');
+    } else if (view === 'policies') {
+      if (policies) { policies.classList.remove('hidden'); policies.classList.add('flex'); }
+      if (tabPolicies) tabPolicies.className = activeClass;
+      if (title) title.textContent = 'Active Policy Engine';
+      if (badge) badge.textContent = 'Ruleset v2.4.1';
+      if (subtitle) subtitle.textContent = '4 deterministic verification guidelines loaded in local memory.';
+      if (tourOverlay) tourOverlay.classList.add('hidden');
+    }
+  }
+</script>
+
+
+
+
+
+
+
+</body></html>

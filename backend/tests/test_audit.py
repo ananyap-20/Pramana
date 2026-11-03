@@ -204,7 +204,7 @@ def test_authorization_roles_and_organization_separation(audit_environment):
     tokens, _, _ = audit_environment
     with TestClient(create_app()) as client:
         contract = client.get('/openapi.json').json()["paths"]["/api/audit/reviews/analyze"]["post"]
-        assert contract["security"] == [{"HTTPBearer": []}]
+        assert contract["security"] == [{"APIKeyCookie": []}]
         assert contract["responses"]["422"]["content"]["application/json"]["schema"]["$ref"].endswith('/AuditError')
         assert client.get('/api/audit/me').status_code == 401
         assert analyze(client, tokens, role="reader").status_code == 403

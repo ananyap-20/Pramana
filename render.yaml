@@ -1,12 +1,13 @@
 services:
   - type: web
     name: pramana-api
-    runtime: python
+    runtime: docker
     plan: free
-    buildCommand: pip install uv==0.11.25 && uv sync --locked --no-dev
-    startCommand: uv run --no-sync uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
+      - key: PRAMANA_ENABLE_LOCAL_INTAKE
+        value: "1"
       - key: CORS_ORIGINS
         sync: false
 

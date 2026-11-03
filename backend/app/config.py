@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import os
 import re
+from urllib.parse import urlsplit
 
 from app.intake_models import IntakeLimits
 
@@ -29,6 +30,12 @@ def get_settings() -> Settings:
     cors_origins = tuple(origin.strip() for origin in raw_origins.split(",") if origin.strip())
     if not cors_origins:
         raise RuntimeError("CORS_ORIGINS must contain at least one explicit origin.")
+    for origin in cors_origins:
+        parsed = urlsplit(origin)
+        if (parsed.scheme not in {"https", "http"} or not parsed.hostname or parsed.username or parsed.password or
+                parsed.path or parsed.query or parsed.fragment or "*" in origin or
+                (parsed.scheme == "http" and parsed.hostname not in {"localhost", "127.0.0.1"})):
+            raise ValueError("CORS_ORIGINS must be exact HTTPS origins (HTTP is loopback-only).")
 
     database_url = os.getenv("DATABASE_URL")
     mongodb_uri = os.getenv("MONGODB_URI")

@@ -14,9 +14,9 @@ from app.audit_models import AuditProblem
 
 
 class RetainedFiles:
-    def __init__(self, repository, storage):
+    def __init__(self, repository, storage, *, collection_name=None):
         self.repository, self.storage = repository, storage
-        self.records = repository.collection.database.get_collection("audit_files_v1",
+        self.records = repository.collection.database.get_collection(collection_name or getattr(repository, "files_collection", "audit_files_v1"),
             write_concern=repository.collection.write_concern)
 
     def start(self):

@@ -12,7 +12,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Form, Header, HTTPException, Query, Request, Response, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
-from fastapi.security import HTTPBearer
+from fastapi.security import APIKeyCookie
 from starlette.concurrency import run_in_threadpool
 
 from app.audit_models import AuditAnalytics, AuditAnalyzeRequest, AuditDecisionRequest, AuditError, AuditEvent, AuditHistory, AuditRun, AuditSnapshot
@@ -63,11 +63,13 @@ class AuditRuntime:
         self.repository = None
         self.auth = None
         self.files = None
+        self.legacy_files = None
         self.cleanup_task = None
         self.cleanup_failed = False
         storage = BunnyStorage.from_environment()
         identities = os.getenv("PRAMANA_AUDIT_IDENTITIES")
-        if not identities:
+        identity_enabled = bool(os.getenv("PRAMANA_FIREBASE_PROJECT_ID"))
+        if not identities and not identity_enabled:
             if storage or os.getenv("PRAMANA_REQUIRE_AUDIT") == "1" or os.getenv("PRAMANA_REQUIRE_BUNNY") == "1":
                 raise ValueError("Deployment requires authenticated audit configuration.")
             if os.getenv("PRAMANA_AUDIT_KEYS") or os.getenv("PRAMANA_AUDIT_ACTIVE_KEY"):
@@ -75,15 +77,24 @@ class AuditRuntime:
             return
         if not settings.mongodb_uri:
             raise ValueError("Authenticated audit requires MongoDB; memory fallback is not supported.")
-        self.auth = AuditAuth(identities)
+        self.auth = AuditAuth(identities) if identities else None
         cipher = SnapshotCipher(os.getenv("PRAMANA_AUDIT_KEYS", ""), os.getenv("PRAMANA_AUDIT_ACTIVE_KEY", ""))
         try:
             days = int(os.getenv("PRAMANA_AUDIT_RETENTION_DAYS", "30"))
         except ValueError:
             raise ValueError("Audit retention must be an integer from 1 to 90 days.") from None
         self.repository = AuditRepository(settings.mongodb_uri, settings.mongodb_db, cipher, days)
+        if identity_enabled:
+            # New identities never inherit shared history or legacy audit records.
+            self.repository.collection = self.repository.collection.database.get_collection("identity_reviews_v1",
+                write_concern=self.repository.collection.write_concern, read_concern=self.repository.collection.read_concern)
+            self.repository.files_collection = "identity_files_v1"
         if storage:
             self.files = RetainedFiles(self.repository, storage)
+            if identity_enabled:
+                # Preserve expiry cleanup without granting new identities access
+                # to legacy originals or copying their ownership.
+                self.legacy_files = RetainedFiles(self.repository, storage, collection_name="audit_files_v1")
         if os.getenv("PRAMANA_REQUIRE_BUNNY") == "1" and self.files is None:
             raise ValueError("Deployment requires Bunny Storage configuration.")
 
@@ -92,6 +103,14 @@ class AuditRuntime:
             self.repository.start()
         if self.files:
             self.files.start()
+        if self.legacy_files:
+            self.legacy_files.start()
+
+    def sweep_files(self):
+        if self.files:
+            self.files.sweep()
+        if self.legacy_files:
+            self.legacy_files.sweep()
 
     async def start_cleanup(self):
         if self.files:
@@ -100,7 +119,7 @@ class AuditRuntime:
     async def cleanup_loop(self):
         while True:
             try:
-                await run_in_threadpool(self.files.sweep)
+                await run_in_threadpool(self.sweep_files)
                 self.cleanup_failed = False
             except Exception:
                 # Preserve cleanup references for retry; readiness checks provider availability.
@@ -152,7 +171,7 @@ class AuditRuntime:
 
     def router(self):
         router = APIRouter(prefix="/api/audit", tags=["Authenticated audit"], route_class=AuditRoute,
-                           dependencies=[Depends(HTTPBearer(auto_error=False))],
+                           dependencies=[Depends(APIKeyCookie(name="__Host-pramana_session" if os.getenv("PRAMANA_COOKIE_SECURE", "1") != "0" else "pramana_local_session", auto_error=False))],
                            responses={status: {"model": AuditError} for status in (401, 403, 404, 408, 409, 413, 422, 429, 503)})
         repository = self.repository
 

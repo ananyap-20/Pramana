@@ -131,10 +131,6 @@ export function HumanReviewPage() {
         </section>
       ) : (
         <>
-          <div className="demo-notice" role="note">
-            {durable ? 'This review and its evidence are retained for your organization. Decisions record your access-key identity and preserve earlier decisions. Final use remains a human choice.' : 'Demo decisions use shared metadata history or temporary upload access. Connect organization audit access before creating a review that must survive restart.'}
-          </div>
-
           <section className="review-summary" aria-label="Review run summary">
             <div><span className="summary-label">Review run</span><code>{review.review_run_id}</code></div>
             <div><span className="summary-label">Draft version</span><strong>{review.draft_version}</strong></div>
@@ -142,11 +138,12 @@ export function HumanReviewPage() {
             <div><span className="summary-label">Current decision</span><strong>{latestDecision?.decision ?? 'Not recorded'}</strong></div>
           </section>
 
-          <section className="review-panel">
+          <div className="human-review-layout"><div className="review-reading-column">
+          <section className="reading-section">
             <h2>Submitted draft</h2>
             <p className="muted-copy">Exact text returned by the analysis run. {review.document_provenance ? 'Analyzed from the confirmed document transcription.' : review.input_type === 'docx' ? 'Extracted from an ordinary-paragraph DOCX.' : 'Submitted as plain text.'}</p>
             <pre className="draft-preview">{review.draft_text}</pre>
-            {durable && review.input_type !== 'text' && <>
+            {durable && review.input_type !== 'plain_text' && <>
               <button className="secondary-button" disabled={downloading} onClick={() => { void downloadOriginal() }}>{downloading ? 'Downloading…' : 'Download retained original'}</button>
               <p className="muted-copy">Requires configured private-file storage and an original retained for this run. Extraction previews may expire separately.</p>
               {originalError && <p className="error-message" role="alert">{originalError}</p>}
@@ -155,12 +152,12 @@ export function HumanReviewPage() {
 
           <DocumentProvenance review={review} />
 
-          <section className="review-panel">
+          <section className="reading-section">
             <h2>Evidence to review <span className="count-pill">{review.findings.length}</span></h2>
             {review.findings.length ? (
               <div className="review-findings">
-                {review.findings.map((finding) => (
-                  <FindingCard key={finding.finding_id} finding={finding} expanded />
+                {review.findings.map((finding, index) => (
+                  <FindingCard key={finding.finding_id} finding={finding} expanded collapsible initiallyOpen={index === 0} />
                 ))}
               </div>
             ) : (
@@ -168,7 +165,7 @@ export function HumanReviewPage() {
             )}
           </section>
 
-          <section className="review-panel">
+          </div><aside className="decision-panel">
             <h2>Record a human decision</h2>
             <label className="attestation">
               <input type="checkbox" checked={attested} onChange={(event) => setAttested(event.target.checked)} />
@@ -202,7 +199,7 @@ export function HumanReviewPage() {
                 ))}
               </ol>
             )}
-          </section>
+          </aside></div>
         </>
       )}
     </div>

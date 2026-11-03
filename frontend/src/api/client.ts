@@ -6,6 +6,92 @@
 
 const API_BASE = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://127.0.0.1:8000').replace(/\/+$/, '')
 
+export interface SessionIdentity {
+  actor_id: string
+  organization_id: string
+  role: 'reader' | 'reviewer' | 'admin'
+  email: string
+  expires_at: number
+  workspace: 'personal' | 'organization'
+}
+let sessionIdentity: SessionIdentity | null = null
+let sessionEpoch = 0
+const responseEpochs = new WeakMap<Response, number>()
+function checkResponseSession(response: Response) {
+  const epoch = responseEpochs.get(response)
+  if (epoch !== undefined && epoch !== sessionEpoch) throw new ApiError(409, 'The account changed. Retry from your current workspace.')
+}
+export function currentIdentity() { return sessionIdentity }
+
+export function setSessionIdentity(identity: SessionIdentity | null) {
+  const owner = identity ? `${identity.actor_id}:${identity.organization_id}` : ''
+  const previousOwner = sessionIdentity ? `${sessionIdentity.actor_id}:${sessionIdentity.organization_id}` : ''
+  if (owner !== previousOwner || !identity) sessionEpoch++
+  if (!owner || owner !== previousOwner) intakeTokens.clear()
+  try {
+    if (!owner || window.sessionStorage.getItem('pramana.identity-owner.v1') !== owner) {
+      clearCurrentReview()
+      intakeTokens.clear()
+      window.sessionStorage.removeItem(INTAKE_ACCESS_KEY)
+    }
+    window.sessionStorage.removeItem('pramana.audit-access.v1')
+    if (owner) window.sessionStorage.setItem('pramana.identity-owner.v1', owner)
+    else window.sessionStorage.removeItem('pramana.identity-owner.v1')
+  } catch { /* Browser storage may be unavailable. Server authorization remains authoritative. */ }
+  sessionIdentity = identity
+}
+
+export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const epoch = sessionEpoch
+  const headers = new Headers(options.headers)
+  const method = options.method ?? 'GET'
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    const csrf = await fetch(`${API_BASE}/api/auth/csrf`, { credentials: 'include', cache: 'no-store', signal: options.signal })
+    const body = await handleResponse<{ csrf_token: string }>(csrf)
+    headers.set('X-CSRF-Token', body.csrf_token)
+  }
+  if (epoch !== sessionEpoch) throw new ApiError(409, 'The account changed. Retry from your current workspace.')
+  const response = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: 'include', cache: 'no-store' })
+  if (epoch !== sessionEpoch) throw new ApiError(409, 'The account changed. Retry from your current workspace.')
+  const context = response.headers.get('X-Pramana-Context')
+  if (context && sessionIdentity && context !== `${sessionIdentity.actor_id}:${sessionIdentity.organization_id}`) {
+    setSessionIdentity(null)
+    window.dispatchEvent(new Event('pramana:session-expired'))
+    throw new ApiError(409, 'Your workspace changed in another tab. Sign in again to continue.')
+  }
+  if (response.status === 401 && path !== '/api/auth/session') {
+    setSessionIdentity(null)
+    window.dispatchEvent(new Event('pramana:session-expired'))
+  }
+  if (response.ok) responseEpochs.set(response, epoch)
+  return response
+}
+
+export async function restoreSession(): Promise<SessionIdentity | null> {
+  const epoch = sessionEpoch
+  const response = await apiFetch('/api/auth/session')
+  if (epoch !== sessionEpoch) throw new ApiError(409, 'The account changed. Retry the session check.')
+  if (response.status === 401) { setSessionIdentity(null); return null }
+  const identity = await handleResponse<SessionIdentity>(response)
+  setSessionIdentity(identity)
+  return identity
+}
+
+export async function exchangeIdentity(idToken: string) {
+  const response = await apiFetch('/api/auth/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_token: idToken }) })
+  if (!response.ok) await handleResponse(response)
+  return restoreSession()
+}
+
+export async function endSession() {
+  // Invalidate in-flight private responses before starting logout.
+  setSessionIdentity(null)
+  try {
+    const response = await apiFetch('/api/auth/logout', { method: 'POST' })
+    if (!response.ok) await handleResponse(response)
+  } finally { setSessionIdentity(null) }
+}
+
 // ─── Response Types ────────────────────────────────────────────────────────
 
 export interface HealthResponse {
@@ -131,6 +217,7 @@ export function clearCurrentReview(): void {
 }
 
 export function loadCurrentReview(): AnalyzeResponse | null {
+  if (!sessionIdentity) return null
   try {
     const stored = window.sessionStorage.getItem(CURRENT_REVIEW_KEY)
     if (!stored) return null
@@ -187,7 +274,9 @@ async function handleResponse<T>(res: Response): Promise<T> {
     }
     throw new ApiError(res.status, detail)
   }
-  return res.json() as Promise<T>
+  const value = await res.json() as T
+  checkResponseSession(res)
+  return value
 }
 
 // ─── API Functions ─────────────────────────────────────────────────────────
@@ -198,35 +287,24 @@ export async function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
 }
 
 export async function getDemoConfig(brandId: string, signal?: AbortSignal): Promise<DemoConfigResponse> {
-  const res = await fetch(`${API_BASE}/api/demo/config/${encodeURIComponent(brandId)}`, { signal, cache: 'no-store' })
+  const res = await apiFetch(`/api/demo/config/${encodeURIComponent(brandId)}`, { signal })
   return handleResponse<DemoConfigResponse>(res)
 }
 
 export async function analyzeDraft(request: AnalyzeRequest, requestId: string = crypto.randomUUID()): Promise<AnalyzeResponse> {
-  if (getAuditToken()) return auditRequest('/reviews/analyze', { method: 'POST', body: JSON.stringify(request) }, requestId)
-  const res = await fetch(`${API_BASE}/api/reviews/analyze`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
-  })
-  return handleResponse<AnalyzeResponse>(res)
+  return auditRequest('/reviews/analyze', { method: 'POST', body: JSON.stringify(request) }, requestId)
 }
 
 export async function analyzeDocument(brandId: string, file: File, requestId: string = crypto.randomUUID()): Promise<AnalyzeResponse> {
   const form = new FormData()
   form.append('brand_id', brandId)
   form.append('file', file)
-  if (getAuditToken()) return auditRequest('/reviews/analyze-document', { method: 'POST', body: form }, requestId)
-  const res = await fetch(`${API_BASE}/api/reviews/analyze-document`, {
-    method: 'POST',
-    body: form,
-  })
-  return handleResponse<AnalyzeResponse>(res)
+  return auditRequest('/reviews/analyze-document', { method: 'POST', body: form }, requestId)
 }
 
 export async function getReviewHistory(brandId: string, signal?: AbortSignal): Promise<ReviewRunSummary[]> {
-  const res = await fetch(`${API_BASE}/api/reviews/history/${encodeURIComponent(brandId)}`, { signal, cache: 'no-store' })
-  return handleResponse<ReviewRunSummary[]>(res)
+  const history = await auditRequest<AuditHistory>(`/reviews/history/${encodeURIComponent(brandId)}`, { signal })
+  return history.records
 }
 
 export async function submitReviewDecision(
@@ -237,23 +315,13 @@ export async function submitReviewDecision(
   requestId: string = crypto.randomUUID(),
 ): Promise<ReviewDecisionResponse> {
   if (review?.persistence === 'mongodb_encrypted_audit') {
-    if (!getAuditToken()) throw new ApiError(401, 'Connect your audit access key to save this decision.')
     if (expectedRevision === undefined) throw new ApiError(409, 'Reload the review before deciding.')
     const saved = await auditRequest<ReviewDecisionEvent>(`/reviews/${encodeURIComponent(reviewRunId)}/decision`, {
       method: 'POST', body: JSON.stringify({ decision, expected_revision: expectedRevision }),
     }, requestId)
     return { ...saved, review_run_id: reviewRunId }
   }
-  if (review?.document_provenance) {
-    return intakeRequest(review.document_provenance.extraction_id,
-      `/reviews/${encodeURIComponent(reviewRunId)}/decision`, { decision })
-  }
-  const res = await fetch(`${API_BASE}/api/reviews/${encodeURIComponent(reviewRunId)}/decision`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ decision }),
-  })
-  return handleResponse<ReviewDecisionResponse>(res)
+  throw new ApiError(410, 'This legacy review is unavailable. Analyze the draft in your signed-in workspace.')
 }
 
 export interface ExtractedPage {
@@ -288,7 +356,7 @@ export interface ExtractionResponse {
   file_sha256: string
   expires_at: string
   current: ExtractionVersion | null
-  confirmation: { version: number; text_sha256: string; confirmed_at: string; actor: null; actor_kind: string } | null
+  confirmation: { version: number; text_sha256: string; confirmed_at: string; actor: string | null; actor_kind: string } | null
   warnings: string[]
   error: string | null
   tools: Record<string, string>
@@ -304,7 +372,7 @@ export interface DocumentProvenance {
   text_sha256: string
   human_edited: boolean
   confirmed_at: string
-  actor: null
+  actor: string | null
   actor_kind: string
   original_available_until: string
   tools: Record<string, string>
@@ -337,7 +405,7 @@ export async function createExtraction(brandId: string, file: File, signal?: Abo
   const form = new FormData()
   form.append('brand_id', brandId)
   form.append('file', file)
-  const response = await handleResponse<ExtractionResponse & { access_token: string }>(await fetch(`${API_BASE}/api/intake`, {
+  const response = await handleResponse<ExtractionResponse & { access_token: string }>(await apiFetch('/api/intake', {
     method: 'POST', body: form, signal,
   }))
   rememberAccess(response.extraction_id, response.access_token, response.expires_at)
@@ -345,14 +413,14 @@ export async function createExtraction(brandId: string, file: File, signal?: Abo
 }
 
 export async function intakeRequest<T>(id: string, suffix = '', body?: unknown, signal?: AbortSignal): Promise<T> {
-  if (suffix === '/analyze' && getAuditToken()) {
+  if (suffix === '/analyze') {
     const access = intakeHeaders(id).Authorization.replace('Bearer ', '')
     const version = body as { version: number; text_sha256: string }
     return auditRequest<T>(`/intake/${encodeURIComponent(id)}/analyze`, {
       method: 'POST', body: JSON.stringify(body), headers: { 'X-Intake-Token': access }, signal,
     }, `intake_${id}_${version.version}_${version.text_sha256}`.slice(0, 100))
   }
-  return handleResponse<T>(await fetch(`${API_BASE}/api/intake/${encodeURIComponent(id)}${suffix}`, {
+  return handleResponse<T>(await apiFetch(`/api/intake/${encodeURIComponent(id)}${suffix}`, {
     method: body === undefined ? 'GET' : 'POST',
     headers: { ...intakeHeaders(id), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
     body: body === undefined ? undefined : JSON.stringify(body), signal, cache: 'no-store',
@@ -360,32 +428,18 @@ export async function intakeRequest<T>(id: string, suffix = '', body?: unknown, 
 }
 
 export async function getExtractionPreview(id: string, page: number, signal?: AbortSignal): Promise<Blob> {
-  const response = await fetch(`${API_BASE}/api/intake/${encodeURIComponent(id)}/pages/${page}/preview`, {
+  const response = await apiFetch(`/api/intake/${encodeURIComponent(id)}/pages/${page}/preview`, {
     headers: intakeHeaders(id), signal, cache: 'no-store',
   })
   if (!response.ok) await handleResponse(response)
-  return response.blob()
+  const value = await response.blob()
+  checkResponseSession(response)
+  return value
 }
 
 export async function getActiveReviewHistory(review: AnalyzeResponse): Promise<ReviewRunSummary[]> {
   if (review.persistence === 'mongodb_encrypted_audit') return [await auditRequest(`/reviews/${encodeURIComponent(review.review_run_id)}`)]
-  if (review.document_provenance) {
-    return [await intakeRequest<ReviewRunSummary>(review.document_provenance.extraction_id,
-      `/reviews/${encodeURIComponent(review.review_run_id)}`)]
-  }
-  return getReviewHistory(review.brand_id)
-}
-
-const AUDIT_TOKEN_KEY = 'pramana.audit-access.v1'
-
-export function getAuditToken(): string {
-  try { return window.sessionStorage.getItem(AUDIT_TOKEN_KEY) ?? '' } catch { return '' }
-}
-
-export function setAuditToken(value: string): void {
-  if (value) window.sessionStorage.setItem(AUDIT_TOKEN_KEY, value)
-  else window.sessionStorage.removeItem(AUDIT_TOKEN_KEY)
-  clearCurrentReview()
+  throw new ApiError(410, 'Legacy review access is disabled.')
 }
 
 export interface AuditIdentity {
@@ -396,20 +450,20 @@ export interface AuditIdentity {
 }
 
 export async function auditRequest<T>(path: string, options: RequestInit = {}, key?: string): Promise<T> {
+  if (!sessionIdentity) throw new ApiError(401, 'Sign in to continue.')
   const headers = new Headers(options.headers)
-  headers.set('Authorization', `Bearer ${getAuditToken()}`)
   if (typeof options.body === 'string') headers.set('Content-Type', 'application/json')
   if (key) headers.set('Idempotency-Key', key)
-  return handleResponse<T>(await fetch(`${API_BASE}/api/audit${path}`, { ...options, headers, cache: 'no-store' }))
+  return handleResponse<T>(await apiFetch(`/api/audit${path}`, { ...options, headers }))
 }
 
 export async function getRetainedOriginal(runId: string): Promise<Blob> {
-  if (!getAuditToken()) throw new ApiError(401, 'Connect your organization access key to download a retained original.')
-  const response = await fetch(`${API_BASE}/api/audit/reviews/${encodeURIComponent(runId)}/original`, {
-    headers: { Authorization: `Bearer ${getAuditToken()}` }, cache: 'no-store',
-  })
+  if (!sessionIdentity) throw new ApiError(401, 'Sign in to download a retained original.')
+  const response = await apiFetch(`/api/audit/reviews/${encodeURIComponent(runId)}/original`)
   if (!response.ok) await handleResponse(response)
-  return response.blob()
+  const value = await response.blob()
+  checkResponseSession(response)
+  return value
 }
 
 export interface AuditHistory {
@@ -476,7 +530,7 @@ export interface VisualResponse {
 export async function analyzeVisual(request: VisualRequest): Promise<VisualResponse> {
   const body = JSON.stringify(request)
   if (new Blob([body]).size > 768 * 1024) throw new ApiError(413, 'Visual request exceeds 768 KiB. Reduce the markup or assets.')
-  return handleResponse<VisualResponse>(await fetch(`${API_BASE}/api/visual/analyze`, {
+  return handleResponse<VisualResponse>(await apiFetch('/api/visual/analyze', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body, cache: 'no-store',
   }))
 }

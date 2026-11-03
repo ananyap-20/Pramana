@@ -1,5 +1,7 @@
 # Pramana
 
+**Authentication update:** application access now requires a verified Firebase account. The landing page introduces Pramana and supports email/password signup/login, Google, GitHub, verification guidance and password reset. Private APIs require server-verified session cookies; new accounts receive isolated personal workspaces and organization roles require explicit server-controlled membership. Shared demo routes are closed to the new flows. **Start with [authentication setup, security boundaries and the configuration checklist](docs/authentication.md)** before using the app. Older demo/operator-key descriptions below describe the preserved legacy implementation, not an unauthenticated access option.
+
 Pramana is a small brand-governance demo. It checks a draft against a fictional brand's approved terminology, prohibited phrase, one plan fact, and disclaimer rule. Each returned finding includes a rule and source reference; a human can inspect the receipt and record a review decision.
 
 **Status:** PDF/image intake is an opt-in local prototype. Authenticated audit mode adds organization-scoped encrypted evidence retention, durable decisions, history and analytics; see [audit setup and verification](docs/audit-and-analytics.md). Optional legacy MongoDB metadata storage remains available separately; see [MongoDB setup](docs/mongodb-setup.md). See [intake setup and release gates](docs/pdf-image-intake.md) and [intake verification](docs/pdf-image-intake-verification.md). This is not a production certification or general-purpose fact/legal check. Hosted access, key management, backups and durability must be verified in your deployment.
@@ -38,13 +40,13 @@ $env:VITE_API_BASE_URL = "http://127.0.0.1:8000"
 npm run dev
 ```
 
-Open the Vite URL printed by the command. The API is at `http://127.0.0.1:8000`; interactive API docs are at `/docs`.
+Configure the Firebase settings and MongoDB/encryption keys in [the authentication guide](docs/authentication.md), including `PRAMANA_COOKIE_SECURE=0` for loopback HTTP development. Open the Vite URL printed by the command. The API is at `http://127.0.0.1:8000`; `/docs` also requires a valid session. Missing authentication configuration leaves the landing page available but cannot authorize application access.
 
 ## Configuration
 
 The backend reads `CORS_ORIGINS`, a comma-separated list of exact browser origins. Local defaults are in `.env.example`. Optional `MONGODB_URI` and `MONGODB_DB` enable MongoDB metadata storage. A configured but unavailable database fails startup; it never silently falls back to memory. `/health` pings the selected database and returns `mongodb_review_metadata` when ready. `DATABASE_URL` remains reserved and unused. The frontend reads `VITE_API_BASE_URL`; locally, set it to the API origin as shown above.
 
-Never put a real `.env` file, credentials, or secrets in Git. Shared demo APIs retain only metadata and are unauthenticated: use fictional material there. Authenticated `/api/audit` APIs use separate organization-scoped storage and encrypted evidence with explicit retention. Connect the organization key before analysis to use this protected path.
+Never put a real `.env` file, credentials, or secrets in Git. The browser now signs in through Firebase and uses HttpOnly session cookies; it does not ask for organization keys. Authenticated `/api/audit` APIs use separate workspace-scoped storage and encrypted evidence with explicit retention. Legacy shared records are inaccessible through the new flows. Follow [the hosting checklist](docs/authentication.md#one-time-configuration-checklist): same-site HTTPS or a same-origin API proxy is required for the chosen cookies.
 
 ## Deployment preparation
 

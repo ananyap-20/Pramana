@@ -65,6 +65,7 @@ class ExtractionJob:
     brand_id: str
     expires_at: datetime
     deadline: float
+    owner_actor: str | None = None
     state: str = "queued"
     versions: list[ExtractionVersion] = field(default_factory=list)
     result: ExtractionResult | None = None
@@ -128,8 +129,10 @@ class ExtractionStore:
                             del self.jobs[key]
 
     def _lookup(self, extraction_id: str, token: str) -> ExtractionJob:
+        from app.services.identity import request_actor
         job = self.jobs.get(extraction_id)
-        if job is None or not hmac.compare_digest(job.token_digest, digest(token.encode())):
+        if (job is None or job.owner_actor != request_actor.get() or
+                not hmac.compare_digest(job.token_digest, digest(token.encode()))):
             raise IntakeProblem(404, "Extraction not found or access has expired.")
         if time.monotonic() >= job.deadline and job.state != "expired":
             self._expire(job)
@@ -156,6 +159,7 @@ class ExtractionStore:
             return self.snapshot(self._lookup(extraction_id, token))
 
     def create(self, filename: str | None, mime: str | None, content: bytes, brand_id: str) -> ExtractionCreated:
+        from app.services.identity import request_actor
         limits = self.settings.intake_limits
         filename, kind = validate_upload(filename, mime, content, limits.max_bytes)
         with self.lock:
@@ -169,7 +173,7 @@ class ExtractionStore:
             token = secrets.token_urlsafe(32)
             job = ExtractionJob(str(uuid4()), digest(token.encode()), filename, kind, digest(content), content,
                                 brand_id, datetime.now(UTC) + timedelta(seconds=limits.ttl_seconds),
-                                time.monotonic() + limits.ttl_seconds)
+                                time.monotonic() + limits.ttl_seconds, owner_actor=request_actor.get())
             self.jobs[job.extraction_id] = job
             job.task = asyncio.create_task(self._extract(job))
             return ExtractionCreated(**self.snapshot(job).model_dump(), access_token=token)
@@ -281,7 +285,8 @@ class ExtractionStore:
                                         pages=tuple(pages), created_at=now, parent_version=current.version,
                                         human_edited=any(p.method == "human_edited" for p in pages))
             job.versions.append(version)
-            job.confirmation = Confirmation(version=version.version, text_sha256=version.text_sha256, confirmed_at=now)
+            job.confirmation = Confirmation(version=version.version, text_sha256=version.text_sha256, confirmed_at=now,
+                actor=job.owner_actor, actor_kind="authenticated_user" if job.owner_actor else "anonymous_capability_holder")
             job.analysis = None
             job.last_confirmation = request_digest
             job.state = "ready"
@@ -300,6 +305,7 @@ class ExtractionStore:
             provenance = DocumentProvenance(extraction_id=job.extraction_id, file_sha256=job.file_digest,
                                            file_type=job.kind, version=current.version, text_sha256=current.text_sha256,
                                            human_edited=current.human_edited, confirmed_at=job.confirmation.confirmed_at,
+                                           actor=job.confirmation.actor, actor_kind=job.confirmation.actor_kind,
                                            tools=job.result.tools, settings=job.result.settings,
                                            pages=current.pages, original_available_until=job.expires_at)
             job.analysis = AnalyzeResponse(review_run_id=run.review_run_id, brand_id=run.brand_id,

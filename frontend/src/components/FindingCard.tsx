@@ -1,10 +1,21 @@
 import { CATEGORY_LABELS } from '../reviewLabels'
 import type { EvidenceReceiptResponse } from '../api/client'
 import { EvidenceStatusBadge } from './StatusBadge'
+import { useState } from 'react'
 
-export function FindingCard({ finding, expanded = false }: { finding: EvidenceReceiptResponse; expanded?: boolean }) {
-  return <article className="finding-card">
-    <div className="finding-header"><div><span className="eyebrow">{CATEGORY_LABELS[finding.category]}</span><h3>{finding.rule_id.replace(/-/g, ' ')}</h3></div><EvidenceStatusBadge status={finding.evidence_status} /></div>
+const TITLES: Record<string, string> = {
+  'preferred-terminology-workspace': 'Use the preferred term “workspace”',
+  'prohibited-guaranteed-no-errors': 'Remove the absolute guarantee',
+  'starter-plan-team-limit': 'Check the Starter plan team limit',
+  'plan-feature-availability-disclaimer': 'Plan availability disclaimer',
+}
+
+export function FindingCard({ finding, expanded = false, collapsible = false, initiallyOpen = false }: {
+  finding: EvidenceReceiptResponse; expanded?: boolean; collapsible?: boolean; initiallyOpen?: boolean
+}) {
+  const [open, setOpen] = useState(initiallyOpen)
+  const header = <div className="finding-header"><div><span className="eyebrow">{CATEGORY_LABELS[finding.category]}</span><h3>{TITLES[finding.rule_id] ?? finding.rule_id.replace(/-/g, ' ')}</h3></div><EvidenceStatusBadge status={finding.evidence_status} /></div>
+  const body = <div className="finding-body">
     {finding.flagged_text && <blockquote className="finding-quote"><small>Exact flagged text</small>“{finding.flagged_text}”</blockquote>}
     <p>{finding.explanation}</p>
     <div className="finding-action"><strong>Suggested action · for your consideration</strong><p>{finding.suggested_action}</p></div>
@@ -19,5 +30,8 @@ export function FindingCard({ finding, expanded = false }: { finding: EvidenceRe
       <dt>Validation</dt><dd>{finding.validation_outcome}</dd>
       <dt>Evaluated</dt><dd>{new Date(finding.timestamp).toLocaleString()}</dd>
     </dl></details> : <a href="#/evidence-receipts" className="text-button">Inspect source & draft passage →</a>}
-  </article>
+  </div>
+  return collapsible ? <details className="finding-row" name="review-findings" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+    <summary>{header}<span className="finding-toggle">{open ? 'Hide details −' : 'Review finding +'}</span></summary>{body}
+  </details> : <article className="finding-card">{header}{body}</article>
 }

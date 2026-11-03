@@ -17,7 +17,7 @@ services:
       - key: PRAMANA_REQUIRE_BUNNY
         value: "1"
       - key: PRAMANA_ENABLE_LOCAL_INTAKE
-        value: "0"
+        value: "1"
       - key: MONGODB_DB
         value: pramana
       - key: MONGODB_URI

@@ -8,6 +8,7 @@ import { EvidenceReceiptsPage } from './pages/EvidenceReceiptsPage'
 import { HumanReviewPage } from './pages/HumanReviewPage'
 import { VisualChecksPage } from './pages/VisualChecksPage'
 import { GuidePage } from './pages/GuidePage'
+import { AuthGate } from './auth/AuthGate'
 
 function getPageFromHash(): string {
   const hash = window.location.hash.replace(/^#\/?/, '')
@@ -60,8 +61,8 @@ export default function App() {
   }
 
   return (
-    <Shell activePath={page} onNavigate={navigate}>
+    <AuthGate><Shell activePath={page} onNavigate={navigate}>
       {content}
-    </Shell>
+    </Shell></AuthGate>
   )
 }
