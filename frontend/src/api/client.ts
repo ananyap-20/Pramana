@@ -86,6 +86,9 @@ export interface ReviewDecisionEvent {
   decision_id: string
   decision: ReviewDecision
   decided_at: string
+  actor_id?: string
+  revision?: number
+  request_id?: string
 }
 
 export interface ReviewDecisionResponse extends ReviewDecisionEvent {
@@ -102,6 +105,10 @@ export interface ReviewRunSummary {
   current_decision: ReviewDecision | null
   current_decision_at: string | null
   decision_history: ReviewDecisionEvent[]
+  revision?: number
+  expires_at?: string
+  actor_id?: string
+  draft_sha256?: string
 }
 
 const CURRENT_REVIEW_KEY = 'pramana.current-review.v1'
@@ -128,7 +135,7 @@ export function loadCurrentReview(): AnalyzeResponse | null {
     const stored = window.sessionStorage.getItem(CURRENT_REVIEW_KEY)
     if (!stored) return null
     const candidate = JSON.parse(stored) as Partial<AnalyzeResponse>
-    if (candidate.document_provenance && Date.parse(candidate.document_provenance.original_available_until) <= Date.now()) {
+    if (candidate.persistence !== 'mongodb_encrypted_audit' && candidate.document_provenance && Date.parse(candidate.document_provenance.original_available_until) <= Date.now()) {
       clearCurrentReview()
       return null
     }
@@ -195,7 +202,8 @@ export async function getDemoConfig(brandId: string): Promise<DemoConfigResponse
   return handleResponse<DemoConfigResponse>(res)
 }
 
-export async function analyzeDraft(request: AnalyzeRequest): Promise<AnalyzeResponse> {
+export async function analyzeDraft(request: AnalyzeRequest, requestId: string = crypto.randomUUID()): Promise<AnalyzeResponse> {
+  if (getAuditToken()) return auditRequest('/reviews/analyze', { method: 'POST', body: JSON.stringify(request) }, requestId)
   const res = await fetch(`${API_BASE}/api/reviews/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -204,10 +212,11 @@ export async function analyzeDraft(request: AnalyzeRequest): Promise<AnalyzeResp
   return handleResponse<AnalyzeResponse>(res)
 }
 
-export async function analyzeDocument(brandId: string, file: File): Promise<AnalyzeResponse> {
+export async function analyzeDocument(brandId: string, file: File, requestId: string = crypto.randomUUID()): Promise<AnalyzeResponse> {
   const form = new FormData()
   form.append('brand_id', brandId)
   form.append('file', file)
+  if (getAuditToken()) return auditRequest('/reviews/analyze-document', { method: 'POST', body: form }, requestId)
   const res = await fetch(`${API_BASE}/api/reviews/analyze-document`, {
     method: 'POST',
     body: form,
@@ -224,7 +233,17 @@ export async function submitReviewDecision(
   reviewRunId: string,
   decision: ReviewDecision,
   review?: AnalyzeResponse,
+  expectedRevision?: number,
+  requestId: string = crypto.randomUUID(),
 ): Promise<ReviewDecisionResponse> {
+  if (review?.persistence === 'mongodb_encrypted_audit') {
+    if (!getAuditToken()) throw new ApiError(401, 'Connect your audit access key to save this decision.')
+    if (expectedRevision === undefined) throw new ApiError(409, 'Reload the review before deciding.')
+    const saved = await auditRequest<ReviewDecisionEvent>(`/reviews/${encodeURIComponent(reviewRunId)}/decision`, {
+      method: 'POST', body: JSON.stringify({ decision, expected_revision: expectedRevision }),
+    }, requestId)
+    return { ...saved, review_run_id: reviewRunId }
+  }
   if (review?.document_provenance) {
     return intakeRequest(review.document_provenance.extraction_id,
       `/reviews/${encodeURIComponent(reviewRunId)}/decision`, { decision })
@@ -326,6 +345,13 @@ export async function createExtraction(brandId: string, file: File, signal?: Abo
 }
 
 export async function intakeRequest<T>(id: string, suffix = '', body?: unknown, signal?: AbortSignal): Promise<T> {
+  if (suffix === '/analyze' && getAuditToken()) {
+    const access = intakeHeaders(id).Authorization.replace('Bearer ', '')
+    const version = body as { version: number; text_sha256: string }
+    return auditRequest<T>(`/intake/${encodeURIComponent(id)}/analyze`, {
+      method: 'POST', body: JSON.stringify(body), headers: { 'X-Intake-Token': access }, signal,
+    }, `intake_${id}_${version.version}_${version.text_sha256}`.slice(0, 100))
+  }
   return handleResponse<T>(await fetch(`${API_BASE}/api/intake/${encodeURIComponent(id)}${suffix}`, {
     method: body === undefined ? 'GET' : 'POST',
     headers: { ...intakeHeaders(id), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
@@ -342,9 +368,57 @@ export async function getExtractionPreview(id: string, page: number, signal?: Ab
 }
 
 export async function getActiveReviewHistory(review: AnalyzeResponse): Promise<ReviewRunSummary[]> {
+  if (review.persistence === 'mongodb_encrypted_audit') return [await auditRequest(`/reviews/${encodeURIComponent(review.review_run_id)}`)]
   if (review.document_provenance) {
     return [await intakeRequest<ReviewRunSummary>(review.document_provenance.extraction_id,
       `/reviews/${encodeURIComponent(review.review_run_id)}`)]
   }
   return getReviewHistory(review.brand_id)
+}
+
+const AUDIT_TOKEN_KEY = 'pramana.audit-access.v1'
+
+export function getAuditToken(): string {
+  try { return window.sessionStorage.getItem(AUDIT_TOKEN_KEY) ?? '' } catch { return '' }
+}
+
+export function setAuditToken(value: string): void {
+  if (value) window.sessionStorage.setItem(AUDIT_TOKEN_KEY, value)
+  else window.sessionStorage.removeItem(AUDIT_TOKEN_KEY)
+  clearCurrentReview()
+}
+
+export interface AuditIdentity {
+  actor_id: string
+  organization_id: string
+  role: 'reader' | 'reviewer' | 'admin'
+  retention_days: number
+}
+
+export async function auditRequest<T>(path: string, options: RequestInit = {}, key?: string): Promise<T> {
+  const headers = new Headers(options.headers)
+  headers.set('Authorization', `Bearer ${getAuditToken()}`)
+  if (typeof options.body === 'string') headers.set('Content-Type', 'application/json')
+  if (key) headers.set('Idempotency-Key', key)
+  return handleResponse<T>(await fetch(`${API_BASE}/api/audit${path}`, { ...options, headers, cache: 'no-store' }))
+}
+
+export interface AuditHistory {
+  records: ReviewRunSummary[]
+  next_cursor: string | null
+}
+
+export interface AuditAnalytics {
+  total_runs: number
+  total_findings: number
+  decision_events: number
+  outcomes: Record<string, number>
+  categories: Record<string, number>
+  repeated_rules: { rule_id: string; version: string; count: number }[]
+  daily: { date: string; runs: number; findings: number }[]
+  period_start: string
+  period_end: string
+  generated_at: string
+  timezone: 'UTC'
+  definition: string
 }

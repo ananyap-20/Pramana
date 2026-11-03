@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ApiError, getReviewHistory, type ReviewRunSummary } from '../api/client'
+import { ApiError, getAuditToken, getReviewHistory, type ReviewRunSummary } from '../api/client'
+import { AuditDashboard } from './AuditDashboard'
 
 const DEMO_BRAND_ID = 'lumadesk'
 
@@ -11,6 +12,10 @@ function formatDate(value: string): string {
 }
 
 export function AuditTrailPage() {
+  return getAuditToken() ? <AuditDashboard /> : <DemoHistory />
+}
+
+function DemoHistory() {
   const [records, setRecords] = useState<ReviewRunSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -43,7 +48,7 @@ export function AuditTrailPage() {
       </header>
 
       <div className="demo-notice" role="note">
-        Shared demo history is unauthenticated, limited to the latest 100 runs, and stored only in process memory. It does not retain draft text or receipt passages; all records disappear when the service restarts.
+        Shared demo history is unauthenticated and shows the latest 100 runs. It does not retain draft text or receipt passages. The backend can use temporary memory or MongoDB metadata storage; check its health endpoint for the active mode. PDF/image reviews remain temporary and separate.
       </div>
 
       {error && <p className="error-message" role="alert">{error}</p>}

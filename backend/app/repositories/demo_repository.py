@@ -41,6 +41,17 @@ class ReviewRunRepository(Protocol):
 class InMemoryDemoRepository:
     """A bounded, process-local demo store; it is deliberately not durable."""
 
+    persistence = "in_memory_demo_not_durable"
+
+    def start(self) -> None:
+        pass
+
+    def check_ready(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
     def __init__(self, max_review_records: int = MAX_REVIEW_RECORDS) -> None:
         configuration = build_lumadesk_configuration()
         self._brands = {configuration.brand_id: configuration}

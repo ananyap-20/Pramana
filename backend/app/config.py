@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
+import re
 
 from app.intake_models import IntakeLimits
 
@@ -19,6 +20,8 @@ class Settings:
     intake_limits: IntakeLimits
     tesseract_cmd: str
     tessdata_dir: str | None
+    mongodb_uri: str | None = field(default=None, repr=False)
+    mongodb_db: str = "pramana"
 
 
 def get_settings() -> Settings:
@@ -28,11 +31,21 @@ def get_settings() -> Settings:
         raise RuntimeError("CORS_ORIGINS must contain at least one explicit origin.")
 
     database_url = os.getenv("DATABASE_URL")
+    mongodb_uri = os.getenv("MONGODB_URI")
+    if mongodb_uri is not None:
+        mongodb_uri = mongodb_uri.strip()
+        if not mongodb_uri.startswith(("mongodb+srv://", "mongodb://")):
+            raise ValueError("MONGODB_URI must be a MongoDB connection string.")
+    mongodb_db = os.getenv("MONGODB_DB", "pramana").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", mongodb_db) or mongodb_db in {"admin", "local", "config"}:
+        raise ValueError("MONGODB_DB must be an application database name using letters, digits, underscores or hyphens.")
     return Settings(
         cors_origins=cors_origins, database_url=database_url or None,
         intake_enabled=os.getenv("PRAMANA_ENABLE_LOCAL_INTAKE", "0") == "1",
         intake_limits=IntakeLimits.model_validate_json(os.getenv("PRAMANA_INTAKE_LIMITS", "{}")),
         tesseract_cmd=os.getenv("TESSERACT_CMD", "tesseract"),
         tessdata_dir=os.getenv("TESSDATA_DIR") or None,
+        mongodb_uri=mongodb_uri,
+        mongodb_db=mongodb_db,
     )
 

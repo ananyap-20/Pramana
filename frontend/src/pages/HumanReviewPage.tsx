@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   getActiveReviewHistory,
+  auditRequest,
   loadCurrentReview,
   submitReviewDecision,
   ApiError,
   type AnalyzeResponse,
   type ReviewDecision,
   type ReviewDecisionEvent,
+  type AuditIdentity,
 } from '../api/client'
 import { FindingCard } from '../components/FindingCard'
 import { DocumentProvenance } from '../components/DocumentProvenance'
@@ -23,32 +25,63 @@ export function HumanReviewPage() {
   const [attested, setAttested] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [revision, setRevision] = useState<number | undefined>()
+  const [historyLoaded, setHistoryLoaded] = useState(false)
+  const requestRef = useRef({ fingerprint: '', key: '' })
+  const durable = review?.persistence === 'mongodb_encrypted_audit'
+  const [canDecide, setCanDecide] = useState(!durable)
+
+  const refreshHistory = useCallback(async () => {
+    if (!review) return
+    const records = await getActiveReviewHistory(review)
+    const record = records.find((item) => item.review_run_id === review.review_run_id)
+    setDecisionHistory(record?.decision_history ?? [])
+    setRevision(record?.revision)
+    setHistoryLoaded(true)
+  }, [review])
 
   useEffect(() => {
     if (!review) return
     let cancelled = false
     getActiveReviewHistory(review)
-      .then((records) => {
+      .then(async (records) => {
+        const identity = durable ? await auditRequest<AuditIdentity>('/me') : null
         if (!cancelled) {
           const record = records.find((item) => item.review_run_id === review.review_run_id)
           setDecisionHistory(record?.decision_history ?? [])
+          setRevision(record?.revision)
+          setHistoryLoaded(true)
+          setCanDecide(!identity || identity.role !== 'reader')
         }
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof ApiError ? err.detail : 'Could not load review history.')
       })
     return () => { cancelled = true }
-  }, [review])
+  }, [review, durable])
 
   async function handleDecision(decision: ReviewDecision) {
-    if (!review || !attested || saving) return
+    if (!review || !attested || saving || !historyLoaded || !canDecide) return
     setSaving(true)
     setError('')
     try {
-      const saved = await submitReviewDecision(review.review_run_id, decision, review)
-      setDecisionHistory((current) => [...current, saved])
+      const fingerprint = JSON.stringify([decision, revision])
+      if (requestRef.current.fingerprint !== fingerprint) requestRef.current = { fingerprint, key: crypto.randomUUID() }
+      const saved = await submitReviewDecision(review.review_run_id, decision, review, revision, requestRef.current.key)
+      setDecisionHistory((current) => current.some((item) => item.decision_id === saved.decision_id) ? current : [...current, saved])
+      setRevision(saved.revision)
+      setAttested(false)
+      if (durable) {
+        setHistoryLoaded(false)
+        try { await refreshHistory() } catch { setError('Decision saved. Reload decision history to see the latest revision.') }
+      }
     } catch (err) {
       setError(err instanceof ApiError ? `API error ${err.status}: ${err.detail}` : 'Could not save the decision.')
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) setCanDecide(false)
+      if (err instanceof ApiError && err.status === 409) {
+        setAttested(false)
+        try { await refreshHistory() } catch { setHistoryLoaded(false) }
+      }
     } finally {
       setSaving(false)
     }
@@ -77,7 +110,7 @@ export function HumanReviewPage() {
       ) : (
         <>
           <div className="demo-notice" role="note">
-            Demo decisions are unauthenticated and temporary. PDF/image decisions require this upload’s access token and expire with the extraction. These records do not establish a verified identity or legal approval.
+            {durable ? 'This review and its evidence are retained for your organization. Decisions record your access-key identity and preserve earlier decisions. Final use remains a human choice.' : 'Demo decisions use shared metadata history or temporary upload access. Connect organization audit access before creating a review that must survive restart.'}
           </div>
 
           <section className="review-summary" aria-label="Review run summary">
@@ -120,7 +153,7 @@ export function HumanReviewPage() {
                   className={item.value === 'approved' ? 'primary-button' : 'secondary-button'}
                   key={item.value}
                   type="button"
-                  disabled={!attested || saving}
+                  disabled={!attested || saving || !historyLoaded || !canDecide}
                   onClick={() => { void handleDecision(item.value) }}
                 >
                   {saving ? 'Saving…' : item.label}
@@ -129,11 +162,14 @@ export function HumanReviewPage() {
             </div>
             <p className="muted-copy">Each selection appends a timestamped decision to this run. New decisions do not erase prior ones.</p>
             {error && <p className="error-message" role="alert">{error}</p>}
+            {durable && historyLoaded && !canDecide && <p className="muted-copy">Reviewer access is required to record a decision. Your current access allows viewing this review.</p>}
+            {!historyLoaded && <button className="secondary-button" onClick={() => { void refreshHistory().catch(() => setError('Could not refresh review history.')) }}>Reload decision history</button>}
             {decisionHistory.length > 0 && (
               <ol className="decision-history" aria-label="Decision history">
                 {decisionHistory.map((item) => (
                   <li key={item.decision_id}>
                     <strong>{item.decision}</strong>
+                    {item.actor_id && <span>{item.actor_id} · revision {item.revision}</span>}
                     <time dateTime={item.decided_at}>{new Date(item.decided_at).toLocaleString()}</time>
                   </li>
                 ))}

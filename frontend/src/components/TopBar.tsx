@@ -20,7 +20,7 @@ export function TopBar() {
 
   const statusText = {
     checking: 'Checking API…',
-    connected: 'API connected · in-memory demo',
+    connected: 'API connected · fictional demo',
     unavailable: 'API unavailable',
   }[apiState]
 

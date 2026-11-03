@@ -2,7 +2,7 @@
 
 Pramana is a small brand-governance demo. It checks a draft against a fictional brand's approved terminology, prohibited phrase, one plan fact, and disclaimer rule. Each returned finding includes a rule and source reference; a human can inspect the receipt and record a review decision.
 
-**Status:** PDF/image intake is implemented as an opt-in local prototype (3 November 2026). See [setup, API, limits and release gates](docs/pdf-image-intake.md) and [fresh verification](docs/pdf-image-intake-verification.md). It is not a production service and does not provide general-purpose fact checking, authentication, durable audit storage, or legal review.
+**Status:** PDF/image intake is an opt-in local prototype. Authenticated audit mode adds organization-scoped encrypted evidence retention, durable decisions, history and analytics; see [audit setup and verification](docs/audit-and-analytics.md). Optional legacy MongoDB metadata storage remains available separately; see [MongoDB setup](docs/mongodb-setup.md). See [intake setup and release gates](docs/pdf-image-intake.md) and [intake verification](docs/pdf-image-intake-verification.md). This is not a production certification or general-purpose fact/legal check. Hosted access, key management, backups and durability must be verified in your deployment.
 
 ## What works
 
@@ -11,8 +11,10 @@ Pramana is a small brand-governance demo. It checks a draft against a fictional 
 - Four deterministic checks for the fictional LumaDesk brand, with version-pinned rules, sources, excerpts, and candidate validation.
 - Evidence Receipts display the exact evaluated draft and matching passage when applicable.
 - Reviewer can record `approved`, `revision`, or `rejected`; history shows finding counts and decision events.
-- Local history retains metadata for at most 100 runs in the current server process. It does not store draft text or receipt passages and is lost on process restart.
+- Without `MONGODB_URI`, history retains at most 100 runs in process memory and is lost on restart. With MongoDB, text/DOCX metadata and decisions persist and history returns the latest 100 runs. Draft text and receipts are not retained; PDF/image jobs and their private reviews remain volatile. The MongoDB demo caps each run at 100 decision events; further decisions return 409. Retention/deletion policy and authenticated ownership remain release work.
 - No LLM or external analysis API is used.
+- Authenticated organization audit mode retains encrypted evaluated text, evidence and configuration snapshots, conflict-safe human decisions, restart-safe paginated history and real analytics. See [audit setup, API and verification](docs/audit-and-analytics.md). It requires MongoDB, operator-issued access keys and encryption/retention configuration; the shared demo remains separate.
+- Bounded backend static visual checks: exact logo asset hashes, configured CSS palette targets, declared-color contrast and HTML image descriptions. Requires an operator-approved manifest; see [API, setup, supported scope and limits](docs/visual-checks.md). Rendered-page evaluation is not implemented.
 
 ## Run locally
 
@@ -22,7 +24,8 @@ From the repository root, start the backend in PowerShell:
 
 ```powershell
 uv sync --locked --all-groups
-Copy-Item .env.example .env
+# First setup only: preserve an existing .env and its private credentials.
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 uv run uvicorn app.main:app --app-dir backend --env-file .env --host 127.0.0.1 --port 8000
 ```
 
@@ -39,9 +42,9 @@ Open the Vite URL printed by the command. The API is at `http://127.0.0.1:8000`;
 
 ## Configuration
 
-The backend reads `CORS_ORIGINS`, a comma-separated list of exact browser origins. Local defaults are in `.env.example`. `DATABASE_URL` is reserved and unused by this in-memory demo. The frontend reads `VITE_API_BASE_URL`; locally, set it to the API origin as shown above.
+The backend reads `CORS_ORIGINS`, a comma-separated list of exact browser origins. Local defaults are in `.env.example`. Optional `MONGODB_URI` and `MONGODB_DB` enable MongoDB metadata storage. A configured but unavailable database fails startup; it never silently falls back to memory. `/health` pings the selected database and returns `mongodb_review_metadata` when ready. `DATABASE_URL` remains reserved and unused. The frontend reads `VITE_API_BASE_URL`; locally, set it to the API origin as shown above.
 
-Never put a real `.env` file, credentials, or secrets in Git. The API returns the submitted draft to the requesting browser for review, but the demo repository stores only run metadata, counts, and decisions. Do not submit confidential material: the service has no authentication, and other visitors to the same running instance can read history summaries and change decisions if they know a run ID.
+Never put a real `.env` file, credentials, or secrets in Git. Shared demo APIs retain only metadata and are unauthenticated: use fictional material there. Authenticated `/api/audit` APIs use separate organization-scoped storage and encrypted evidence with explicit retention. Connect the organization key before analysis to use this protected path.
 
 ## Deployment preparation
 
@@ -55,7 +58,7 @@ Deployment attempt status (2026-10-29): Render blocked Blueprint creation with a
 
 Platform terms checked against official docs on 2026-10-29: [Render free services](https://render.com/docs/free), [Render static sites](https://render.com/docs/static-sites), and [Render Blueprint YAML](https://render.com/docs/blueprint-spec). Render static sites are free to deploy. Free web services sleep after 15 minutes without traffic, take about a minute to wake, have ephemeral local filesystems, receive 750 free instance hours per workspace each calendar month, and are not recommended for production. Check current provider terms and billing settings before deployment; no cost is guaranteed by this repository.
 
-The backend has no authentication or rate limiting. Its shared process-local decision/history store is suitable only for a disposable public demo with fictional/sample content, not private drafts or audit requirements. Render restarts, redeployments, and spin-downs can clear history.
+Shared demo history and decisions remain unauthenticated and suitable for fictional content. Authenticated audit mode must be configured separately and accessed through `/api/audit`. It retains completed review evidence and decisions; PDF/image extraction jobs and original uploads remain volatile. A free sleeping web service is a demo deployment, not proof of production readiness.
 
 ## Verification
 

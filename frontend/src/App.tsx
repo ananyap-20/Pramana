@@ -1,5 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
 import { Shell } from './components/Shell'
+import { AuditAccess } from './components/AuditAccess'
 import { AuditTrailPage } from './pages/AuditTrailPage'
 import { BrandGuidelinesPage } from './pages/BrandGuidelinesPage'
 import { DraftWorkspacePage } from './pages/DraftWorkspacePage'
@@ -49,6 +50,7 @@ export default function App() {
 
   return (
     <Shell activePath={page} onNavigate={navigate}>
+      <AuditAccess />
       {content}
     </Shell>
   )

@@ -7,7 +7,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: 'draft-workspace', label: 'Draft workspace' },
   { path: 'review-and-sign-off', label: 'Human review' },
   { path: 'evidence-receipts', label: 'Evidence receipts' },
-  { path: 'audit-trail-and-history', label: 'Review history' },
+  { path: 'audit-trail-and-history', label: 'Audit and analytics' },
   { path: 'brand-guidelines-and-rules', label: 'Brand rules' },
 ]
 

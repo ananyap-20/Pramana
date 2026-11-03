@@ -5,8 +5,10 @@ description = "Day 1 deterministic evidence-validation demo for Pramana"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+  "cryptography>=46,<49",
   "fastapi>=0.115,<1.0",
   "pillow==13.0.0",
+  "pymongo>=4.19.0",
   "pypdfium2==5.14.0",
   "python-docx>=1.2,<2.0",
   "python-multipart>=0.0.20,<1.0",

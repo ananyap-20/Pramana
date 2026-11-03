@@ -9,15 +9,22 @@ from typing import Annotated
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
+from pymongo.errors import PyMongoError
 
 from app.config import get_settings
 from app.intake_api import IntakeBodyLimitMiddleware, build_intake_router
+from app.visual_api import VisualBodyLimitMiddleware, build_visual_router
+from app.audit_api import AuditRuntime
+from app.audit_middleware import AuditMiddleware
+from app.audit_models import AuditProblem
 from app.services.extraction_store import ExtractionStore, IntakeProblem
 from app.domain import ReviewDecision
 from app.repositories.demo_repository import (
     InMemoryDemoRepository,
     UnknownReviewRunError,
 )
+from app.repositories.mongodb_repository import MongoReviewRepository, StorageUnavailableError, DecisionLimitError
 from app.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
@@ -40,41 +47,71 @@ from app.services.document_intake import (
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    repository = InMemoryDemoRepository()
+    repository = (
+        MongoReviewRepository(settings.mongodb_uri, settings.mongodb_db)
+        if settings.mongodb_uri else InMemoryDemoRepository()
+    )
     intake = ExtractionStore(settings)
+    audit = AuditRuntime(settings, intake)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        await intake.start()
         try:
+            try:
+                await run_in_threadpool(repository.start)
+                await run_in_threadpool(audit.start)
+            except PyMongoError:
+                raise StorageUnavailableError("MongoDB is unavailable. Check credentials and Atlas network access.") from None
+            await intake.start()
             yield
         finally:
             await intake.close()
+            await run_in_threadpool(repository.close)
+            await run_in_threadpool(audit.close)
 
     app = FastAPI(
         title="Pramana Day 1 Demo API",
         version="0.1.0",
-        description="Fictional deterministic evidence-validation demo. Not durable persistence.",
+        description="Fictional deterministic demo. Optional MongoDB history metadata; PDF/image jobs remain local and volatile.",
         lifespan=lifespan,
     )
     app.state.intake = intake
+    app.state.audit = audit
     app.add_middleware(IntakeBodyLimitMiddleware)
+    app.add_middleware(VisualBodyLimitMiddleware)
+    app.add_middleware(AuditMiddleware, runtime=audit)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(settings.cors_origins),
         allow_credentials=False,
-        allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "Authorization"],
+        allow_methods=["GET", "POST", "DELETE"],
+        allow_headers=["Content-Type", "Authorization", "Idempotency-Key", "X-Intake-Token"],
     )
     app.include_router(build_intake_router(intake))
+    app.include_router(build_visual_router())
+    app.include_router(audit.router())
+
+    @app.exception_handler(AuditProblem)
+    async def audit_problem(request, error: AuditProblem):
+        return JSONResponse({"detail": str(error)}, status_code=error.status)
 
     @app.exception_handler(IntakeProblem)
     async def intake_problem(request, error: IntakeProblem):
         return JSONResponse({"detail": str(error)}, status_code=error.status)
 
+    @app.exception_handler(PyMongoError)
+    @app.exception_handler(StorageUnavailableError)
+    async def storage_problem(request, error):
+        return JSONResponse({"detail": "MongoDB is unavailable. Retry later or check backend configuration."}, status_code=503)
+
+    @app.exception_handler(DecisionLimitError)
+    async def decision_limit(request, error):
+        return JSONResponse({"detail": str(error)}, status_code=409)
+
     @app.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
-        return HealthResponse(status="ok", persistence="in_memory_demo_not_durable")
+        repository.check_ready()
+        return HealthResponse(status="ok", persistence=repository.persistence)
 
     @app.get("/api/demo/config/{brand_id}", response_model=DemoConfigResponse)
     def demo_config(brand_id: str) -> DemoConfigResponse:
@@ -115,7 +152,7 @@ def create_app() -> FastAPI:
             draft_id=review_run.draft.draft_id,
             draft_version=review_run.draft.version,
             evaluated_at=review_run.evaluated_at,
-            persistence="in_memory_demo_not_durable",
+            persistence=repository.persistence,
             input_type="plain_text",
             draft_text=review_run.draft.text,
             findings=[EvidenceReceiptResponse.from_domain(receipt) for receipt in receipts],
@@ -131,7 +168,8 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=413, detail="The uploaded document exceeds the 5 MiB limit.")
         try:
             extracted = extract_docx_bytes(file.filename, content)
-            review_run, receipts = analyze_draft(
+            review_run, receipts = await run_in_threadpool(
+                analyze_draft,
                 draft_text=extracted.text,
                 brand_id=brand_id,
                 configuration_repository=repository,
@@ -152,7 +190,7 @@ def create_app() -> FastAPI:
             draft_id=review_run.draft.draft_id,
             draft_version=review_run.draft.version,
             evaluated_at=review_run.evaluated_at,
-            persistence="in_memory_demo_not_durable",
+            persistence=repository.persistence,
             input_type="docx",
             draft_text=review_run.draft.text,
             paragraph_count=extracted.paragraph_count,

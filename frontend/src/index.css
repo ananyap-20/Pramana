@@ -284,6 +284,11 @@
 .history-card-top > div { display: flex; min-width: 0; flex-direction: column; gap: 0.25rem; }
 .history-stats { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; color: #35454d; font-size: 0.85rem; }
 .history-decisions summary { color: #004967; cursor: pointer; font-size: 0.85rem; }
+.audit-access { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; padding: 1rem; margin-bottom: 1.5rem; background: #f1f6fa; border: 1px solid #d8e0e5; border-radius: 0.6rem; }
+.audit-access form { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; width: 100%; }
+.audit-access input { flex: 1; min-width: 10rem; border: 1px solid #879aa8; border-radius: 0.3rem; padding: 0.65rem; }
+.audit-table { width: 100%; border-collapse: collapse; text-align: left; }
+.audit-table th, .audit-table td { padding: 0.6rem; border-bottom: 1px solid #d8e0e5; overflow-wrap: anywhere; }
 
 @media (max-width: 1024px) {
   .workspace-grid { grid-template-columns: 1fr !important; }

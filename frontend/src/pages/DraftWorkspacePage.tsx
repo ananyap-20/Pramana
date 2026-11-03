@@ -4,6 +4,7 @@ import {
   analyzeDraft,
   ApiError,
   clearCurrentReview,
+  getAuditToken,
   saveCurrentReview,
   type AnalyzeResponse,
 } from '../api/client'
@@ -26,6 +27,7 @@ export function DraftWorkspacePage() {
   const [docxFile, setDocxFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const submittingRef = useRef(false)
+  const requestRef = useRef({ fingerprint: '', key: '' })
   const isPdfImage = !!docxFile && !docxFile.name.toLowerCase().endsWith('.docx')
   const invalidate = useCallback(() => {
     setResult(null)
@@ -49,15 +51,17 @@ export function DraftWorkspacePage() {
     setResult(null)
     try {
       let response: AnalyzeResponse
+      const fingerprint = docxFile ? JSON.stringify([brandId, docxFile.name, docxFile.size, docxFile.lastModified]) : JSON.stringify([brandId, draftText])
+      if (requestRef.current.fingerprint !== fingerprint) requestRef.current = { fingerprint, key: crypto.randomUUID() }
       if (docxFile) {
-        response = await analyzeDocument(brandId, docxFile)
+        response = await analyzeDocument(brandId, docxFile, requestRef.current.key)
       } else {
         if (!draftText.trim()) {
           setErrorMsg('Please enter draft text before analysing.')
           setSubmitState('error')
           return
         }
-        response = await analyzeDraft({ brand_id: brandId, draft_text: draftText })
+        response = await analyzeDraft({ brand_id: brandId, draft_text: draftText }, requestRef.current.key)
       }
       saveCurrentReview(response)
       setResult(response)
@@ -126,7 +130,7 @@ export function DraftWorkspacePage() {
       </div>
 
       <div className="demo-notice" role="note">
-        Unauthenticated demo: use fictional, non-sensitive copy only. PDF/image originals and transcriptions are held temporarily for confirmation and expire after 15 minutes. Their reviews stay outside shared history. Text/DOCX history remains shared and resets when the service restarts.
+        {getAuditToken() ? 'Organization audit access is connected. Completed text, DOCX and confirmed document reviews are saved with encrypted evidence for the configured retention period. Original PDF/image uploads and extraction jobs still expire separately.' : 'Shared demo mode: use fictional, non-sensitive copy only. Connect an organization access key to create saved reviews with protected history and analytics. PDF/image uploads and demo decisions remain temporary.'}
       </div>
 
       {/* Draft meta bar */}
