@@ -12,6 +12,22 @@ const json = (value, status = 200) => new Response(JSON.stringify(value), { stat
 afterEach(() => { storage.clear(); globalThis.fetch = originalFetch })
 async function readiness(audit) { globalThis.fetch = async () => json({ status: 'ok', audit }); await api.getReadiness() }
 
+test('API address trims environment whitespace before removing trailing slashes', async () => {
+  const configured = stripTypeScriptTypes(source, { mode: 'strip' })
+    .replace('import.meta.env.VITE_API_BASE_URL', JSON.stringify('  https://pramana.test/\n'))
+  const client = await import('data:text/javascript;base64,' + Buffer.from(configured).toString('base64'))
+  globalThis.fetch = async (url) => { assert.equal(url, 'https://pramana.test/health'); return json({ status: 'ok' }) }
+  assert.equal((await client.getHealth()).status, 'ok')
+})
+
+test('a whitespace-padded slash preserves same-origin API requests', async () => {
+  const configured = stripTypeScriptTypes(source, { mode: 'strip' })
+    .replace('import.meta.env.VITE_API_BASE_URL', JSON.stringify(' /\n'))
+  const client = await import('data:text/javascript;base64,' + Buffer.from(configured).toString('base64'))
+  globalThis.fetch = async (url) => { assert.equal(url, '/ready'); return json({ status: 'ok', audit: false }) }
+  await client.getReadiness()
+})
+
 test('fresh visitor initializes with one readiness request and no credentials', async () => {
   const calls = []
   globalThis.fetch = async (url, options) => { calls.push({ url, options }); return json({ status: 'ok', audit: false }) }

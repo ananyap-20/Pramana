@@ -4,7 +4,7 @@
  * to the backend dev-server address used in README startup instructions.
  */
 
-const API_BASE = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://127.0.0.1:8000').replace(/\/+$/, '')
+const API_BASE = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://127.0.0.1:8000').trim().replace(/\/+$/, '')
 
 let retainedAudit = false
 let retainedOriginals = false
