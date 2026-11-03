@@ -50,7 +50,7 @@ def get_settings() -> Settings:
         raise ValueError("MONGODB_DB must be an application database name using letters, digits, underscores or hyphens.")
     return Settings(
         cors_origins=cors_origins, database_url=database_url or None,
-        intake_enabled=os.getenv("PRAMANA_ENABLE_LOCAL_INTAKE", "0") == "1",
+        intake_enabled=os.getenv("PRAMANA_ENABLE_LOCAL_INTAKE", "1") == "1",
         intake_limits=IntakeLimits.model_validate_json(os.getenv("PRAMANA_INTAKE_LIMITS", "{}")),
         tesseract_cmd=os.getenv("TESSERACT_CMD", "tesseract"),
         tessdata_dir=os.getenv("TESSDATA_DIR") or None,
