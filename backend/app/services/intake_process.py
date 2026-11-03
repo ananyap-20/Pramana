@@ -14,13 +14,13 @@ from threading import Event
 import time
 
 from app.intake_models import ExtractionResult, IntakeLimits
-from app.services.document_intake import DocumentIntakeError, DocumentIntakeTooLargeError
+from app.services.document_intake import DocumentIntakeError, DocumentIntakeTooLargeError, ExtractedDocument
 
 
 class WindowsJob:
     """Kill descendants and cap their combined committed memory on Windows."""
 
-    def __init__(self, process: subprocess.Popen, memory_mib: int) -> None:
+    def __init__(self, process: subprocess.Popen, memory_mib: int, max_processes: int = 3) -> None:
         from ctypes import wintypes as w
 
         class Basic(ctypes.Structure):
@@ -47,7 +47,7 @@ class WindowsJob:
         self.handle = self.kernel.CreateJobObjectW(None, None)
         limits = Extended()
         limits.basic.flags = 0x2000 | 0x200 | 0x8  # KILL_ON_JOB_CLOSE, JOB_MEMORY, ACTIVE_PROCESS
-        limits.basic.active = 3
+        limits.basic.active = max_processes
         limits.job_memory = memory_mib * 1024 * 1024
         if not self.handle or not self.kernel.SetInformationJobObject(
                 self.handle, 9, ctypes.byref(limits), ctypes.sizeof(limits)) or not self.kernel.AssignProcessToJobObject(
@@ -76,7 +76,7 @@ def _stop(process: subprocess.Popen, job: WindowsJob | None) -> None:
 
 def run_extraction(content: bytes, kind: str, limits: IntakeLimits, executable: str,
                    tessdata: str | None, cancelled: Event, temp_root: str | None = None
-                   ) -> tuple[ExtractionResult, dict[int, bytes]]:
+                   ) -> tuple[ExtractionResult | ExtractedDocument, dict[int, bytes]]:
     with tempfile.TemporaryDirectory(prefix="pramana-intake-", dir=temp_root) as directory:
         root = Path(directory)
         (root / "input").write_bytes(content)
@@ -122,6 +122,8 @@ def run_extraction(content: bytes, kind: str, limits: IntakeLimits, executable: 
             if "error" in payload:
                 error_type = DocumentIntakeTooLargeError if payload.get("too_large") else DocumentIntakeError
                 raise error_type(payload["error"])
+            if kind == "docx":
+                return ExtractedDocument(**payload), {}
             result = ExtractionResult.model_validate(payload)
             previews = {}
             for page in result.pages:

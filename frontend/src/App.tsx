@@ -1,6 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
 import { Shell } from './components/Shell'
-import { AuditAccess } from './components/AuditAccess'
 import { AuditTrailPage } from './pages/AuditTrailPage'
 import { BrandGuidelinesPage } from './pages/BrandGuidelinesPage'
 import { DraftWorkspacePage } from './pages/DraftWorkspacePage'
@@ -8,7 +7,7 @@ import { EvidenceReceiptsPage } from './pages/EvidenceReceiptsPage'
 import { HumanReviewPage } from './pages/HumanReviewPage'
 import { VisualChecksPage } from './pages/VisualChecksPage'
 import { GuidePage } from './pages/GuidePage'
-import { AuthGate } from './auth/AuthGate'
+import { WelcomeTransition } from './components/WelcomeTransition'
 
 function getPageFromHash(): string {
   const hash = window.location.hash.replace(/^#\/?/, '')
@@ -50,9 +49,6 @@ export default function App() {
     case 'visual-checks':
       content = <VisualChecksPage />
       break
-    case 'reviewer-access':
-      content = <AuditAccess />
-      break
     case 'guide':
       content = <GuidePage />
       break
@@ -61,8 +57,8 @@ export default function App() {
   }
 
   return (
-    <AuthGate><Shell activePath={page} onNavigate={navigate}>
+    <WelcomeTransition><Shell activePath={page} onNavigate={navigate}>
       {content}
-    </Shell></AuthGate>
+    </Shell></WelcomeTransition>
   )
 }

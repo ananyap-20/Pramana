@@ -2,6 +2,8 @@
 
 import asyncio
 import os
+import base64
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.exceptions import RequestValidationError
@@ -80,7 +82,18 @@ class VisualBodyLimitMiddleware:
 
 def build_visual_router() -> APIRouter:
     manifests = VisualManifestRepository(os.getenv("PRAMANA_VISUAL_MANIFEST_PATH") or None)
-    router = APIRouter(prefix="/api/visual", tags=["Static visual checks"], route_class=VisualRoute)
+    router = APIRouter(prefix="/api/visual", tags=["Visual checks"], route_class=VisualRoute)
+
+    @router.get("/demo", response_model=VisualRequest)
+    def demo():
+        manifest = manifests.get("lumadesk")
+        if manifest is None or manifest.source_id != "lumadesk-demo-visual-policy":
+            raise HTTPException(404, "The fictional demo policy is not active.")
+        asset = Path(__file__).with_name("data") / "lumadesk-demo.png"
+        return VisualRequest(brand_id="lumadesk", draft_id="fictional-visual-demo", draft_version="v1", mode="rendered",
+            html='<main><img id="logo" src="asset:demo_logo" alt="Fictional LumaDesk demo mark"><h1 class="brand">A thoughtful review.</h1><p class="brand">Evidence informs. Humans decide.</p></main>',
+            css='main { color:#1c1c18; background-color:#fcf9f2; padding:24px; font-family:Arial,sans-serif; } h1 { font-size:28px; } p { font-size:16px; }',
+            assets=({"asset_id":"demo_logo","media_type":"image/png","content_base64":base64.b64encode(asset.read_bytes()).decode()},))
 
     @router.post("/analyze", response_model=VisualResponse,
                  responses={status: {"model": VisualError} for status in (404, 408, 413, 422, 429, 503)})

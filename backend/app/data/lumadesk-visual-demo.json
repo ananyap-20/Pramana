@@ -1,0 +1,26 @@
+{
+  "brand_id": "lumadesk",
+  "version": "demo-visual-v1",
+  "approved": true,
+  "active": true,
+  "source_id": "lumadesk-demo-visual-policy",
+  "source_version": "1",
+  "source_text": "Fictional LumaDesk demo visual policy v1. The demo mark is the bundled exact PNG. Brand text uses #1c1c18 on #fcf9f2. This seeded example does not approve any real organization identity.",
+  "source_excerpt": "Fictional LumaDesk demo visual policy v1. The demo mark is the bundled exact PNG. Brand text uses #1c1c18 on #fcf9f2. This seeded example does not approve any real organization identity.",
+  "logo_selectors": [
+    "#logo"
+  ],
+  "logo_sha256": [
+    "c4408124d81399c2d74b95cbca6cb83a72328db23f97ceb6ccb2df0a75352c57"
+  ],
+  "palette": [
+    {
+      "selector": ".brand",
+      "property": "color",
+      "colors": [
+        "#1c1c18"
+      ]
+    }
+  ],
+  "text_exemptions": []
+}

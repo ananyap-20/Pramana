@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import uuid4
 
 from app.domain import (
     BrandConfiguration,
     CandidateFinding,
     EvidenceReceipt,
+    EvidenceStatus,
     FindingCategory,
     ReviewRun,
 )
@@ -38,8 +39,16 @@ def validate_candidate(
     candidate: CandidateFinding,
     configuration: BrandConfiguration,
     review_run: ReviewRun,
+    deterministic_candidates: frozenset[CandidateFinding] | None = None,
 ) -> ValidationResult:
     """Return a receipt only when all draft, rule, and source checks pass."""
+
+    if configuration.brand_id != review_run.brand_id:
+        return _invalid("brand_mismatch", "Configuration does not belong to the evaluated brand.")
+    if candidate.evidence_status not in tuple(EvidenceStatus):
+        return _invalid("invalid_evidence_status", "Candidate uses an unrecognized finding state.")
+    if not candidate.source_excerpt:
+        return _invalid("invalid_source_excerpt", "Evidence excerpt must not be empty.")
 
     rule = configuration.rule(candidate.rule_id, candidate.rule_version)
     if rule is None or not rule.active:
@@ -83,10 +92,19 @@ def validate_candidate(
                 "This finding category requires an exact quoted passage and location.",
             )
         start, end = candidate.location.start, candidate.location.end
-        if start < 0 or end < start or end > len(review_run.draft.text):
+        if type(start) is not int or type(end) is not int or start < 0 or end <= start or end > len(review_run.draft.text):
             return _invalid("invalid_draft_location", "Candidate location is outside the evaluated draft version.")
         if review_run.draft.text[start:end] != candidate.flagged_text:
             return _invalid("invalid_draft_quote", "Candidate quote does not exist at the stated location.")
+
+    # A valid citation and quote alone do not establish the rule was triggered.
+    # Re-run the bounded deterministic check against this exact evaluated version.
+    from app.services.rule_engine import evaluate_draft
+    matches = deterministic_candidates if deterministic_candidates is not None else frozenset(evaluate_draft(review_run.draft.text, configuration))
+    statuses = (EvidenceStatus.SUPPORTED, EvidenceStatus.CONTRADICTED) if candidate.evidence_status in (
+        EvidenceStatus.UNSUPPORTED, EvidenceStatus.INDETERMINATE) else (candidate.evidence_status,)
+    if not any(replace(candidate, evidence_status=status) in matches for status in statuses):
+        return _invalid("rule_not_satisfied", "Candidate is not established by the deterministic rule.")
 
     return ValidationResult(
         receipt=EvidenceReceipt(

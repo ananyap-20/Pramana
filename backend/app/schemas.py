@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.domain import EvidenceReceipt, ReviewDecisionRecord, ReviewRecord
 from app.intake_models import DocumentProvenance
@@ -43,6 +43,14 @@ class DemoConfigResponse(BaseModel):
 class AnalyzeRequest(BaseModel):
     brand_id: str = Field(min_length=1, max_length=100)
     draft_text: str = Field(min_length=1, max_length=100_000)
+
+
+    @field_validator("draft_text")
+    @classmethod
+    def readable_text(cls, value: str) -> str:
+        if not value.strip() or "\x00" in value or any(0xD800 <= ord(c) <= 0xDFFF for c in value):
+            raise ValueError("Draft must contain readable Unicode text.")
+        return value
 
 
 class LocationResponse(BaseModel):

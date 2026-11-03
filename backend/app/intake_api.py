@@ -28,7 +28,7 @@ class IntakeBodyLimitMiddleware:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
         path = scope["path"]
-        private = path.startswith("/api/intake")
+        private = path.startswith(("/api/intake", "/api/reviews"))
         original_send = send
 
         async def send_private(message):

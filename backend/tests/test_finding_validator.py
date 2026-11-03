@@ -131,3 +131,56 @@ def test_candidate_explanation_must_match_approved_rule() -> None:
     assert result.error is not None
     assert result.error.code == "rule_content_mismatch"
 
+
+
+def test_wrong_state_and_empty_span_cannot_be_serialized():
+    candidate, run = _candidate_and_run()
+    from app.domain import TextLocation
+    for invalid in (replace(candidate, evidence_status="Approved"),
+                    replace(candidate, evidence_status=EvidenceStatus.CONTRADICTED),
+                    replace(candidate, flagged_text="", location=TextLocation(4, 4))):
+        assert not validate_candidate(invalid, build_lumadesk_configuration(), run).is_valid
+
+
+def test_citation_match_does_not_validate_unrelated_draft_passage():
+    candidate, _ = _candidate_and_run()
+    from app.domain import TextLocation
+    invalid = replace(candidate, flagged_text="ready", location=TextLocation(4, 9))
+    result = validate_candidate(invalid, build_lumadesk_configuration(), _run("Our ready copy."))
+    assert result.error.code == "rule_not_satisfied"
+
+
+def test_source_approval_drift_and_brand_mismatch_are_rejected():
+    candidate, run = _candidate_and_run()
+    config = build_lumadesk_configuration()
+    config = replace(config, sources=tuple(replace(source, approved=False) for source in config.sources))
+    assert validate_candidate(candidate, config, run).error.code == "invalid_source_reference"
+    assert validate_candidate(candidate, replace(config, brand_id="other"), run).error.code == "brand_mismatch"
+
+
+def test_unicode_offsets_and_duplicate_locations_remain_exact(monkeypatch):
+    from app.repositories.demo_repository import InMemoryDemoRepository
+    from app.services.review_service import analyze_draft
+    draft = "\U0001f642 dashboard and DASHBOARD"
+    config = build_lumadesk_configuration()
+    candidates = evaluate_draft(draft, config)
+    monkeypatch.setattr("app.services.review_service.evaluate_draft", lambda *args: candidates + candidates)
+    repository = InMemoryDemoRepository()
+    run, receipts = analyze_draft(draft_text=draft, brand_id="lumadesk", configuration_repository=repository, review_run_repository=repository)
+    assert run.draft.text == draft
+    assert len(receipts) == 2
+    assert receipts[0].location != receipts[1].location
+    for receipt in receipts:
+        assert draft[receipt.location.start:receipt.location.end] == receipt.flagged_text
+
+
+def test_orchestration_does_not_trust_citation_only_candidates(monkeypatch):
+    from app.domain import TextLocation
+    from app.repositories.demo_repository import InMemoryDemoRepository
+    from app.services.review_service import analyze_draft
+    candidate, _ = _candidate_and_run()
+    forged = replace(candidate, flagged_text="ready", location=TextLocation(4, 9))
+    monkeypatch.setattr("app.services.review_service.evaluate_draft", lambda *args: [forged])
+    repository = InMemoryDemoRepository()
+    _, receipts = analyze_draft(draft_text="Our ready copy.", brand_id="lumadesk", configuration_repository=repository, review_run_repository=repository)
+    assert receipts == []

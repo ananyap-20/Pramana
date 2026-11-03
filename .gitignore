@@ -27,3 +27,8 @@ Thumbs.db
 npm-cache/
 tmp/
 
+# Local exports and working references, not part of the final application
+/output/
+/front end reference/
+/pramana_no_auth_loading_and_engine.md
+

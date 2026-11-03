@@ -10,6 +10,7 @@ from app.domain import DraftVersion, EvidenceReceipt, ReviewRun
 from app.repositories.demo_repository import BrandConfigurationRepository, ReviewRunRepository
 from app.services.finding_validator import validate_candidate
 from app.services.rule_engine import evaluate_draft
+from app.services import rule_engine
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +39,15 @@ def analyze_draft(
 
     receipts: list[EvidenceReceipt] = []
     rejected_count = 0
-    for candidate in evaluate_draft(draft_text, configuration):
-        result = validate_candidate(candidate, configuration, review_run)
+    seen = set()
+    candidates = evaluate_draft(draft_text, configuration)
+    # Establish applicability independently of the candidate list being validated.
+    expected = frozenset(rule_engine.evaluate_draft(draft_text, configuration))
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        result = validate_candidate(candidate, configuration, review_run, expected)
         if not result.is_valid:
             # Engine-generated candidates should pass validation. Log rejected
             # candidates for debugging without leaking them to the user.

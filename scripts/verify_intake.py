@@ -63,6 +63,14 @@ def main():
             analysis = client.post(base + "/analyze", headers=headers, json={key: confirmed["current"][key] for key in ("version", "text_sha256")})
             analysis_seconds = time.perf_counter() - started
             assert analysis.status_code == 200, analysis.text
+            evaluated = analysis.json()
+            assert evaluated["draft_text"] == actual, "Extraction text changed before evaluation."
+            for finding in evaluated["findings"]:
+                if finding["location"]:
+                    start, end = finding["location"]["start"], finding["location"]["end"]
+                    assert actual[start:end] == finding["flagged_text"], "A finding lost its exact quote span."
+            if name.startswith("held-out-"):
+                assert recovered / len(expected) >= .95, "Text-PDF paragraph recovery fell below the promised threshold."
             report["cases"].append({"file": name, "file_sha256": hashlib.sha256(content).hexdigest(),
                                     "paragraphs_expected": len(expected), "paragraphs_recovered_in_order": recovered,
                                     "normalized_text_exact": normalized == reference,
@@ -70,6 +78,9 @@ def main():
                                     "upload_ack_seconds": round(ack, 4), "extraction_seconds": job["extraction_seconds"],
                                     "analysis_seconds": round(analysis_seconds, 4), "tools": job["tools"]})
             client.post(base + "/cancel", headers=headers)
+    output = ROOT / "tmp/intake-measurements.json"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2))
 
 

@@ -24,6 +24,9 @@ class VisualRequest(ImmutableModel):
     html: str = Field(min_length=1, max_length=100000)
     css: str = Field(default="", max_length=32000)
     assets: tuple[VisualAsset, ...] = Field(default=(), max_length=8)
+    mode: Literal["static_declarations", "rendered"] = "static_declarations"
+    viewport_width: int = Field(default=1280, ge=320, le=1920)
+    viewport_height: int = Field(default=720, ge=240, le=1200)
 
     @model_validator(mode="after")
     def unique_assets(self):
@@ -74,7 +77,7 @@ class VisualFinding(ImmutableModel):
 
 class VisualResponse(ImmutableModel):
     schema_version: Literal["1.0"] = "1.0"
-    mode: Literal["static_declarations"] = "static_declarations"
+    mode: Literal["static_declarations", "rendered"] = "static_declarations"
     brand_id: str
     draft_id: str
     draft_version: str
@@ -87,3 +90,4 @@ class VisualResponse(ImmutableModel):
     assets_sha256: dict[str, str]
     findings: tuple[VisualFinding, ...]
     limitations: tuple[str, ...]
+    rendering: dict[str, str | int | bool] = Field(default_factory=dict)

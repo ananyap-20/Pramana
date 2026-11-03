@@ -9,7 +9,30 @@
 
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main id="bootstrap-welcome" style="min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;background:#fcf9f2;color:#1c1c18;font-family:Georgia,serif">
+        <img src="/favicon.svg" alt="Pramana P brand mark" width="96" height="96" />
+        <p>Pramana</p><h1>Welcome to your desk.</h1>
+        <p>Give your words a thoughtful review. Evidence informs. Humans decide.</p>
+        <p id="boot-status" role="status">Preparing your review desk...</p>
+        <button id="boot-retry" hidden onclick="window.location.reload()">Retry</button>
+        <noscript>Enable JavaScript to open the review desk.</noscript>
+      </main>
+    </div>
+    <script>
+      // Keep a failed or stalled module load actionable before React mounts.
+      function showBootError() {
+        var status = document.getElementById('boot-status');
+        if (!status) return;
+        status.textContent = 'The app could not load. Check your connection and retry.';
+        status.setAttribute('role', 'alert');
+        document.getElementById('boot-retry').hidden = false;
+      }
+      window.addEventListener('error', function (event) {
+        if (event.target instanceof HTMLScriptElement) showBootError();
+      }, true);
+      window.setTimeout(showBootError, 20000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

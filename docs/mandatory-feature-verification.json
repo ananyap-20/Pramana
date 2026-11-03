@@ -1,0 +1,157 @@
+{
+  "verified_at_utc": "2026-11-03T17:38:57.567157+00:00",
+  "scope": "local fictional fixtures only",
+  "backend": {
+    "tests": 241,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "completed_checks": [
+    "Frontend build",
+    "Frontend lint",
+    "Frontend test",
+    "Full backend, real renderer, real MongoDB and browser acceptance",
+    "Independent PDF/OCR quality and exact quote-span gate",
+    "Python compilation"
+  ],
+  "intake": {
+    "timestamp_utc": "2026-11-03T17:38:50.022620+00:00",
+    "environment": "3.14.6 (main, Jun 23 2026, 15:20:04) [MSC v.1944 64 bit (AMD64)]",
+    "cases": [
+      {
+        "file": "held-out-1.pdf",
+        "file_sha256": "a07ff4e0a8df7f5c18d271aaf5b2798e55e38c7732ba7da13de3c0eb3fb7e3a8",
+        "paragraphs_expected": 6,
+        "paragraphs_recovered_in_order": 6,
+        "normalized_text_exact": true,
+        "character_similarity": 1.0,
+        "upload_ack_seconds": 0.0055,
+        "extraction_seconds": 0.9259,
+        "analysis_seconds": 0.0039,
+        "tools": {
+          "pypdfium2": "5.14.0",
+          "pdfium": "156.0.8076.0",
+          "pillow": "13.0.0",
+          "eng.traineddata_sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
+        }
+      },
+      {
+        "file": "held-out-2.pdf",
+        "file_sha256": "9ea277deca8eaaf3dca9d7a41d462e42652cdf73b889f85d137712e0eebc3288",
+        "paragraphs_expected": 6,
+        "paragraphs_recovered_in_order": 6,
+        "normalized_text_exact": true,
+        "character_similarity": 1.0,
+        "upload_ack_seconds": 0.0025,
+        "extraction_seconds": 0.9812,
+        "analysis_seconds": 0.0028,
+        "tools": {
+          "pypdfium2": "5.14.0",
+          "pdfium": "156.0.8076.0",
+          "pillow": "13.0.0",
+          "eng.traineddata_sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
+        }
+      },
+      {
+        "file": "held-out-3.pdf",
+        "file_sha256": "af8d699c01a9d515f4dbdb4fb856b246640945d6ab14fdbcbb7ef63ea702d2b4",
+        "paragraphs_expected": 6,
+        "paragraphs_recovered_in_order": 6,
+        "normalized_text_exact": true,
+        "character_similarity": 1.0,
+        "upload_ack_seconds": 0.0021,
+        "extraction_seconds": 0.9751,
+        "analysis_seconds": 0.0039,
+        "tools": {
+          "pypdfium2": "5.14.0",
+          "pdfium": "156.0.8076.0",
+          "pillow": "13.0.0",
+          "eng.traineddata_sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
+        }
+      },
+      {
+        "file": "scan.pdf",
+        "file_sha256": "02a6547e3e8ac08ca9982fe2ad87624f30e2274e87d7f999dc36e2494596f8f0",
+        "paragraphs_expected": 3,
+        "paragraphs_recovered_in_order": 3,
+        "normalized_text_exact": true,
+        "character_similarity": 1.0,
+        "upload_ack_seconds": 0.0041,
+        "extraction_seconds": 1.4505,
+        "analysis_seconds": 0.0027,
+        "tools": {
+          "pypdfium2": "5.14.0",
+          "pdfium": "156.0.8076.0",
+          "pillow": "13.0.0",
+          "tesseract": "tesseract v5.5.3.20260724",
+          "eng.traineddata_sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
+        }
+      },
+      {
+        "file": "image.png",
+        "file_sha256": "1b3dd1b5089b3493d4a80b8ac359555a71c502cce20c55ff2431f6a26628eb55",
+        "paragraphs_expected": 3,
+        "paragraphs_recovered_in_order": 3,
+        "normalized_text_exact": true,
+        "character_similarity": 1.0,
+        "upload_ack_seconds": 0.0025,
+        "extraction_seconds": 1.1362,
+        "analysis_seconds": 0.0032,
+        "tools": {
+          "pypdfium2": "5.14.0",
+          "pdfium": "156.0.8076.0",
+          "pillow": "13.0.0",
+          "tesseract": "tesseract v5.5.3.20260724",
+          "eng.traineddata_sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
+        }
+      },
+      {
+        "file": "image.jpg",
+        "file_sha256": "d3980beda65e7b53a4a5a2bc549fcd6b67976fa7155d113c43fbdb9ced47f359",
+        "paragraphs_expected": 3,
+        "paragraphs_recovered_in_order": 3,
+        "normalized_text_exact": true,
+        "character_similarity": 1.0,
+        "upload_ack_seconds": 0.0035,
+        "extraction_seconds": 1.2285,
+        "analysis_seconds": 0.0028,
+        "tools": {
+          "pypdfium2": "5.14.0",
+          "pdfium": "156.0.8076.0",
+          "pillow": "13.0.0",
+          "tesseract": "tesseract v5.5.3.20260724",
+          "eng.traineddata_sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
+        }
+      }
+    ],
+    "readiness": {
+      "enabled": true,
+      "ocr_ready": true,
+      "tesseract": "tesseract v5.5.3.20260724",
+      "pypdfium2": "5.14.0",
+      "persistence": "volatile_local_demo",
+      "limits": {
+        "max_bytes": 5242880,
+        "max_pages": 10,
+        "max_pixels": 12000000,
+        "max_total_pixels": 60000000,
+        "render_dpi": 200,
+        "max_characters": 100000,
+        "max_output_bytes": 8388608,
+        "max_regions": 20000,
+        "max_jobs": 8,
+        "concurrency": 1,
+        "timeout_seconds": 60,
+        "ttl_seconds": 900,
+        "memory_mib": 768,
+        "max_versions": 10
+      },
+      "isolation": "process_limits_only_not_a_security_sandbox"
+    }
+  },
+  "database": "real disposable loopback MongoDB; actual restart and mongodump/mongorestore",
+  "original_storage": "real encrypted local test transport; no Bunny provider claim",
+  "browser": "managed Chromium; production frontend; desktop/mobile and reduced motion",
+  "deployment_verified": false
+}

@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from io import BytesIO
 import zipfile
 import zlib
+from pathlib import PurePosixPath
+from lxml import etree
 
 from docx import Document
 from docx.opc.exceptions import PackageNotFoundError
@@ -33,7 +35,7 @@ class ExtractedDocument:
 
 
 def validate_docx_upload(filename: str | None, content: bytes) -> None:
-    if not filename or not filename.lower().endswith(ALLOWED_DOCX_EXTENSION):
+    if not filename or len(filename) > 255 or any(ord(c) < 32 for c in filename) or PurePosixPath(filename.replace("\\", "/")).name != filename or not filename.lower().endswith(ALLOWED_DOCX_EXTENSION):
         raise DocumentIntakeError("Only .docx documents are supported.")
     if not content:
         raise DocumentIntakeError("The uploaded document is empty.")
@@ -42,6 +44,14 @@ def validate_docx_upload(filename: str | None, content: bytes) -> None:
     try:
         with zipfile.ZipFile(BytesIO(content)) as package:
             entries = package.infolist()
+            names = [entry.filename for entry in entries]
+            if (len(set(names)) != len(names) or any(entry.flag_bits & 1 or
+                    ".." in PurePosixPath(entry.filename).parts or entry.filename.startswith(("/", "\\")) or
+                    "vbaproject" in entry.filename.lower() or entry.filename.startswith("word/embeddings/")
+                    for entry in entries)):
+                raise DocumentIntakeError("Encrypted, embedded or macro-enabled DOCX features are unsupported.")
+    except DocumentIntakeError:
+        raise
     except (zipfile.BadZipFile, zipfile.LargeZipFile, OSError, ValueError) as error:
         raise DocumentIntakeError("The upload is not a valid .docx document.") from error
 
@@ -57,6 +67,7 @@ def extract_docx_bytes(filename: str | None, content: bytes) -> ExtractedDocumen
         document = Document(BytesIO(content))
         paragraphs = tuple(paragraph.text for paragraph in document.paragraphs)
     except (
+        etree.LxmlError,
         PackageNotFoundError,
         zipfile.BadZipFile,
         zlib.error,
@@ -74,7 +85,24 @@ def extract_docx_bytes(filename: str | None, content: bytes) -> ExtractedDocumen
         raise DocumentIntakeTooLargeError(
             "The extracted document exceeds the 100,000-character analysis limit."
         )
+    if "\x00" in text or any(0xD800 <= ord(c) <= 0xDFFF for c in text):
+        raise DocumentIntakeError("The document does not contain valid Unicode text.")
     if not any(paragraph.strip() for paragraph in paragraphs):
         raise DocumentIntakeError("The .docx document does not contain readable paragraph text.")
     return ExtractedDocument(text=text, paragraph_count=len(paragraphs))
 
+
+
+def validate_docx_media_type(mime: str | None) -> None:
+    if mime not in (None, "", "application/octet-stream", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"):
+        raise DocumentIntakeError("Only .docx documents with a matching declared file type are supported.")
+
+
+def extract_docx_isolated(filename: str | None, content: bytes) -> ExtractedDocument:
+    """Reuse the existing disposable worker's deadline, memory and output limits."""
+    from threading import Event
+    from app.intake_models import IntakeLimits
+    from app.services.intake_process import run_extraction
+    validate_docx_upload(filename, content)
+    result, _ = run_extraction(content, "docx", IntakeLimits(), "", None, Event())
+    return result

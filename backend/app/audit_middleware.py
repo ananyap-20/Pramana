@@ -1,9 +1,7 @@
-"""Authenticate before body parsing; bound audit requests and sanitize failures."""
+"""Bound shared audit requests and sanitize failures; no account gate."""
 
 import asyncio
-import os
 
-from fastapi import HTTPException
 from starlette.responses import JSONResponse
 
 
@@ -13,8 +11,6 @@ class AuditMiddleware:
         self.active = 0
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] == "http" and scope["path"].startswith("/api/reviews") and os.getenv("PRAMANA_REQUIRE_AUDIT") == "1":
-            return await JSONResponse({"detail": "Connect your organization access key before reviewing."}, 403)(scope, receive, send)
         if scope["type"] != "http" or not scope["path"].startswith("/api/audit/"):
             return await self.app(scope, receive, send)
 
@@ -23,17 +19,11 @@ class AuditMiddleware:
                 message.setdefault("headers", []).extend([(b"cache-control", b"no-store"), (b"x-content-type-options", b"nosniff")])
             await send(message)
 
-        identity = scope.get("state", {}).get("audit_principal")
         if self.runtime.repository is None:
-            return await JSONResponse({"detail": "Authenticated audit is not configured."}, 503)(scope, receive, private_send)
-        if identity is None:
-            if self.runtime.auth is None:
-                return await JSONResponse({"detail": "Sign in to continue."}, 401)(scope, receive, private_send)
-            try:
-                auth = dict(scope["headers"]).get(b"authorization", b"").decode("latin-1")
-                scope.setdefault("state", {})["audit_principal"] = self.runtime.auth.authenticate(auth)
-            except HTTPException as error:
-                return await JSONResponse({"detail": error.detail}, error.status_code, headers=error.headers)(scope, receive, private_send)
+            return await JSONResponse({"detail": "Retained audit storage is not configured."}, 503)(scope, receive, private_send)
+        # Shared storage partition, never a verified human identity.
+        from app.services.audit_security import AuditPrincipal
+        scope.setdefault("state", {})["audit_principal"] = AuditPrincipal("anonymous_reviewer", "public_workspace_v1", "reviewer")
         if self.active >= 4:
             return await JSONResponse({"detail": "Audit capacity is full. Retry later."}, 429)(scope, receive, private_send)
         self.active += 1

@@ -22,8 +22,6 @@ services:
         value: pramana
       - key: MONGODB_URI
         sync: false
-      - key: PRAMANA_AUDIT_IDENTITIES
-        sync: false
       - key: PRAMANA_AUDIT_KEYS
         sync: false
       - key: PRAMANA_AUDIT_ACTIVE_KEY

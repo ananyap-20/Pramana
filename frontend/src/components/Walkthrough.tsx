@@ -30,7 +30,12 @@ export function Walkthrough() {
     const element = dialog.current
     returnFocus.current ??= document.activeElement as HTMLElement
     element?.showModal()
-    return () => { element?.close(); returnFocus.current?.focus() }
+    return () => {
+      element?.close()
+      const target = returnFocus.current
+      const destination = target && target !== document.body && target.isConnected ? target : document.getElementById('main-content')
+      destination?.focus()
+    }
   }, [active])
 
   useEffect(() => {

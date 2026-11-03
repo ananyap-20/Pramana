@@ -28,6 +28,9 @@ def validate_manifest(manifest: VisualManifest) -> VisualManifest:
 class VisualManifestRepository:
     def __init__(self, path: str | None = None):
         self._manifest = None
+        # Like the seeded text rules, this policy applies only to fictional LumaDesk.
+        if path is None:
+            path = str(Path(__file__).resolve().parents[1] / "data/lumadesk-visual-demo.json")
         if path:
             source = Path(path)
             with source.open("rb") as handle:

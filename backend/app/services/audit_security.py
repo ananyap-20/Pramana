@@ -1,27 +1,15 @@
-"""Operator-issued credentials and authenticated encryption; no password database."""
+"""Audit partition metadata and authenticated snapshot encryption."""
 
 import base64
 from dataclasses import dataclass
-import hashlib
-import hmac
 import json
 import os
 import re
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from fastapi import HTTPException
-from pydantic import Field
 
-from app.intake_models import ImmutableModel
 from app.audit_models import AuditProblem
-
-
-class AuditIdentity(ImmutableModel):
-    token_sha256: str = Field(pattern=r"^[a-f0-9]{64}$", repr=False)
-    actor_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,64}$")
-    organization_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,64}$")
-    role: str = Field(pattern=r"^(reader|reviewer|admin)$")
 
 
 @dataclass(frozen=True)
@@ -29,29 +17,6 @@ class AuditPrincipal:
     actor_id: str
     organization_id: str
     role: str
-
-
-class AuditAuth:
-    def __init__(self, raw: str):
-        try:
-            values = json.loads(raw)
-            if not isinstance(values, list) or not 1 <= len(values) <= 100:
-                raise ValueError()
-            self.identities = tuple(AuditIdentity.model_validate(item) for item in values)
-            if len({i.token_sha256 for i in self.identities}) != len(self.identities):
-                raise ValueError()
-        except (ValueError, TypeError):
-            raise ValueError("Invalid audit identities configuration.") from None
-
-    def authenticate(self, authorization: str | None) -> AuditPrincipal:
-        token = authorization.removeprefix("Bearer ") if authorization and authorization.startswith("Bearer ") else ""
-        if not re.fullmatch(r"[A-Za-z0-9_-]{32,256}", token):
-            raise HTTPException(401, "A valid audit access key is required.", headers={"WWW-Authenticate": "Bearer"})
-        digest = hashlib.sha256(token.encode()).hexdigest()
-        identity = next((i for i in self.identities if hmac.compare_digest(i.token_sha256, digest)), None)
-        if identity is None:
-            raise HTTPException(401, "A valid audit access key is required.", headers={"WWW-Authenticate": "Bearer"})
-        return AuditPrincipal(identity.actor_id, identity.organization_id, identity.role)
 
 
 class SnapshotCipher:

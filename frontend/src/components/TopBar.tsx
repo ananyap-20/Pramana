@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getHealth, currentIdentity } from '../api/client'
-import { Icon } from './Icon'
+import { getHealth } from '../api/client'
 
 export function TopBar() {
   const [state, setState] = useState<'checking' | 'connected' | 'unavailable'>('checking')
@@ -15,7 +14,6 @@ export function TopBar() {
   return <div className="connection-bar">
     <span className={`api-status is-${state}`} role="status"><span className="status-dot" />{state === 'checking' ? 'Checking API…' : state === 'connected' ? 'API connected' : 'API unavailable'}</span>
     {state === 'unavailable' && <button className="text-button" onClick={() => { setState('checking'); setAttempt((n) => n + 1) }}>Retry connection</button>}
-    <span className="connection-detail">{currentIdentity()?.workspace === 'organization' ? 'Organization workspace' : 'Personal workspace'} · authenticated access</span>
-    <a className="access-link" href="#/reviewer-access"><Icon name="user" />Reviewer account</a>
+    <span className="connection-detail">Shared review workspace - human decisions required</span>
   </div>
 }

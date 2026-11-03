@@ -1,21 +1,29 @@
 from fastapi.testclient import TestClient
 import pytest
+import os
 
 from app.main import create_app
 
 
-@pytest.fixture(autouse=True)
-def legacy_api_harness(request, monkeypatch):
-    """Historical engine/intake/audit tests exercise their original inner API.
-
-    Identity acceptance tests run the actual outer middleware. There is no
-    environment switch or application setting that disables authentication.
-    """
-    if request.module.__name__.rsplit(".", 1)[-1].startswith("test_identity"):
+@pytest.fixture(scope="session")
+def managed_mongo(tmp_path_factory):
+    executable = os.getenv("PRAMANA_TEST_MONGOD")
+    if not executable:
+        yield None
         return
-    async def inner_api(self, scope, receive, send):
-        return await self.app(scope, receive, send)
-    monkeypatch.setattr("app.identity_api.IdentityMiddleware.__call__", inner_api)
+    from backend.tests.local_mongo import LocalMongo
+    service = LocalMongo(executable, tmp_path_factory.mktemp("pramana-disposable-mongo"))
+    previous = os.environ.get("PRAMANA_TEST_MONGODB_URI")
+    try:
+        service.start()
+        os.environ["PRAMANA_TEST_MONGODB_URI"] = service.uri
+        yield service
+    finally:
+        service.stop()
+        if previous is None:
+            os.environ.pop("PRAMANA_TEST_MONGODB_URI", None)
+        else:
+            os.environ["PRAMANA_TEST_MONGODB_URI"] = previous
 
 
 @pytest.fixture

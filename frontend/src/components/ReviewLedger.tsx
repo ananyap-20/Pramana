@@ -44,7 +44,7 @@ export function ReviewLedger({ records, durable }: { records: ReviewRunSummary[]
     </section>
     <aside className="review-panel ledger-inspector" aria-label="Review inspection">
       <p className="eyebrow">{record ? 'Selected review' : 'The inspection desk'}</p><h2>Audit snapshot</h2>
-      {!record ? <p className="muted-copy">Inspect a ledger entry to view its draft version and human decision history.{durable ? ' Organization reviews also include the retained evaluated text and receipts.' : ' Shared demo history stores metadata only.'}</p> : <>
+      {!record ? <p className="muted-copy">Inspect a ledger entry to view its draft version and human decision history.{durable ? ' Retained reviews also include the retained evaluated text and receipts.' : ' Shared demo history stores metadata only.'}</p> : <>
         <code>{record.review_run_id}</code><dl className="provenance-rows"><dt>Evaluated</dt><dd>{new Date(record.evaluated_at).toLocaleString()}</dd><dt>Draft</dt><dd><code>{record.draft_id} @ {record.draft_version}</code></dd><dt>Decision</dt><dd>{decisionLabels[record.current_decision ?? ''] ?? 'Pending'}</dd>
           {record.revision !== undefined && <><dt>Revision</dt><dd>{record.revision}</dd></>}
           {record.expires_at && <><dt>Retained until</dt><dd>{new Date(record.expires_at).toLocaleString()}</dd></>}
@@ -54,7 +54,7 @@ export function ReviewLedger({ records, durable }: { records: ReviewRunSummary[]
         {opening && <p role="status">Loading the saved evaluated snapshot…</p>}
         {error && <div className="error-box" role="alert"><p className="error-message">{error}</p><button className="secondary-button" onClick={() => { void inspect(record) }}>Retry inspection</button></div>}
         {snapshot && snapshot.review_run_id === record.review_run_id && <><h3 className="access-footnote">Evaluated manuscript</h3><pre className="inspector-excerpt">{snapshot.draft_text}</pre><p className="muted-copy">{snapshot.findings.length} validated findings. Opening this snapshot replaces the active review in this tab.</p><button className="primary-button" onClick={() => { saveCurrentReview(snapshot); window.location.hash = '#/review-and-sign-off' }}>Open saved review →</button></>}
-        {!durable && <p className="muted-copy access-footnote">Draft text and receipts cannot be reopened from shared metadata history. Connect organization access before creating a review that needs a retained snapshot.</p>}
+        {!durable && <p className="muted-copy access-footnote">Draft text and receipts cannot be reopened from shared metadata history. Enable retained audit storage on the server before creating a review that needs a saved snapshot.</p>}
       </>}
     </aside>
   </div>

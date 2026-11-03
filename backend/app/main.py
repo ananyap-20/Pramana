@@ -8,6 +8,7 @@ from typing import Annotated
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
 from starlette.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 from pymongo.errors import PyMongoError
@@ -18,8 +19,6 @@ from app.visual_api import VisualBodyLimitMiddleware, build_visual_router
 from app.audit_api import AuditRuntime
 from app.audit_middleware import AuditMiddleware
 from app.audit_models import AuditProblem
-from app.identity_api import IdentityMiddleware, auth_router
-from app.services.identity import IdentityRuntime
 from app.services.extraction_store import ExtractionStore, IntakeProblem
 from app.domain import ReviewDecision
 from app.repositories.demo_repository import (
@@ -43,13 +42,13 @@ from app.services.document_intake import (
     DocumentIntakeError,
     DocumentIntakeTooLargeError,
     MAX_DOCX_BYTES,
-    extract_docx_bytes,
+    extract_docx_isolated,
+    validate_docx_media_type,
 )
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    identity = IdentityRuntime(settings.cors_origins)
     repository = (
         MongoReviewRepository(settings.mongodb_uri, settings.mongodb_db)
         if settings.mongodb_uri else InMemoryDemoRepository()
@@ -82,23 +81,23 @@ def create_app() -> FastAPI:
     )
     app.state.intake = intake
     app.state.audit = audit
-    app.state.identity = identity
     app.add_middleware(IntakeBodyLimitMiddleware)
     app.add_middleware(VisualBodyLimitMiddleware)
     app.add_middleware(AuditMiddleware, runtime=audit)
-    app.add_middleware(IdentityMiddleware, runtime=identity)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(settings.cors_origins),
-        allow_credentials=True,
-        expose_headers=["X-Pramana-Context"],
+        allow_credentials=False,
         allow_methods=["GET", "POST", "DELETE"],
-        allow_headers=["Content-Type", "Authorization", "Idempotency-Key", "X-Intake-Token", "X-CSRF-Token"],
+        allow_headers=["Content-Type", "Authorization", "Idempotency-Key", "X-Intake-Token"],
     )
     app.include_router(build_intake_router(intake))
     app.include_router(build_visual_router())
     app.include_router(audit.router())
-    app.include_router(auth_router(identity))
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_problem(request, error):
+        return JSONResponse({"detail": "Invalid request. Check supported fields, text and file limits."}, status_code=422)
 
     @app.exception_handler(AuditProblem)
     async def audit_problem(request, error: AuditProblem):
@@ -186,9 +185,11 @@ def create_app() -> FastAPI:
     ) -> AnalyzeResponse:
         content = await file.read(MAX_DOCX_BYTES + 1)
         if len(content) > MAX_DOCX_BYTES:
+            await file.close()
             raise HTTPException(status_code=413, detail="The uploaded document exceeds the 5 MiB limit.")
         try:
-            extracted = extract_docx_bytes(file.filename, content)
+            validate_docx_media_type(file.content_type)
+            extracted = await run_in_threadpool(extract_docx_isolated, file.filename, content)
             review_run, receipts = await run_in_threadpool(
                 analyze_draft,
                 draft_text=extracted.text,

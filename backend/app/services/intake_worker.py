@@ -17,10 +17,15 @@ def main() -> None:
     limits = IntakeLimits.model_validate(request["limits"])
     worker_limits(limits)
     try:
-        from app.services.pdf_image_intake import extract_pdf_image
-        result = extract_pdf_image(root / "input", request["kind"], root, limits,
-                                   request["executable"], request["tessdata"])
-        output = result.model_dump_json()
+        if request["kind"] == "docx":
+            from dataclasses import asdict
+            from app.services.document_intake import extract_docx_bytes
+            output = json.dumps(asdict(extract_docx_bytes("draft.docx", (root / "input").read_bytes())))
+        else:
+            from app.services.pdf_image_intake import extract_pdf_image
+            result = extract_pdf_image(root / "input", request["kind"], root, limits,
+                                       request["executable"], request["tessdata"])
+            output = result.model_dump_json()
         if len(output.encode("utf-8")) > limits.max_output_bytes:
             raise DocumentIntakeTooLargeError("The extraction output exceeds the safety limit.")
     except DocumentIntakeError as error:

@@ -12,7 +12,6 @@ from app.domain import (
     RuleVersion,
     TextLocation,
 )
-from app.services.seed_data import LUMADESK_DISCLAIMER
 
 
 def _active_rule_for(
@@ -110,7 +109,7 @@ def missing_disclaimer_findings(
     rule = _active_rule_for(configuration, FindingCategory.REQUIRED_DISCLAIMER)
     if rule is None:
         return []
-    if LUMADESK_DISCLAIMER.casefold() in draft_text.casefold():
+    if rule.source_excerpt.casefold() in draft_text.casefold():
         return []
     trigger = re.compile(r"(?<!\w)(?:plans?|features?|availability)(?!\w)", re.IGNORECASE)
     if not trigger.search(draft_text):

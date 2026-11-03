@@ -1,4 +1,4 @@
-"""Authenticated audit routes. Legacy demo histories never share these collections."""
+"""Shared retained audit routes, isolated from historical account collections."""
 
 from dataclasses import asdict
 import asyncio
@@ -12,7 +12,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Form, Header, HTTPException, Query, Request, Response, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
-from fastapi.security import APIKeyCookie
 from starlette.concurrency import run_in_threadpool
 
 from app.audit_models import AuditAnalytics, AuditAnalyzeRequest, AuditDecisionRequest, AuditError, AuditEvent, AuditHistory, AuditRun, AuditSnapshot
@@ -20,8 +19,8 @@ from app.intake_models import VersionRequest
 from app.repositories.audit_repository import AuditRepository
 from app.repositories.demo_repository import InMemoryDemoRepository
 from app.schemas import AnalyzeResponse, EvidenceReceiptResponse
-from app.services.audit_security import AuditAuth, AuditPrincipal, SnapshotCipher
-from app.services.document_intake import DocumentIntakeError, MAX_DOCX_BYTES, extract_docx_bytes
+from app.services.audit_security import AuditPrincipal, SnapshotCipher
+from app.services.document_intake import DocumentIntakeError, DocumentIntakeTooLargeError, MAX_DOCX_BYTES, extract_docx_isolated, validate_docx_media_type
 from app.services.review_service import UnknownBrandError, analyze_draft
 from app.services.bunny_storage import BunnyStorage
 from app.services.retained_files import RetainedFiles
@@ -40,12 +39,6 @@ def principal(request: Request) -> AuditPrincipal:
     return request.state.audit_principal
 
 
-def reviewer(identity: Annotated[AuditPrincipal, Depends(principal)]) -> AuditPrincipal:
-    if identity.role not in {"reviewer", "admin"}:
-        raise HTTPException(403, "Reviewer access is required.")
-    return identity
-
-
 class AuditRoute(APIRoute):
     def get_route_handler(self):
         handler = super().get_route_handler()
@@ -61,40 +54,31 @@ class AuditRuntime:
     def __init__(self, settings, intake):
         self.intake = intake
         self.repository = None
-        self.auth = None
         self.files = None
-        self.legacy_files = None
+        self.legacy_files = []
         self.cleanup_task = None
         self.cleanup_failed = False
         storage = BunnyStorage.from_environment()
-        identities = os.getenv("PRAMANA_AUDIT_IDENTITIES")
-        identity_enabled = bool(os.getenv("PRAMANA_FIREBASE_PROJECT_ID"))
-        if not identities and not identity_enabled:
+        if not os.getenv("PRAMANA_AUDIT_KEYS") and not os.getenv("PRAMANA_AUDIT_ACTIVE_KEY"):
             if storage or os.getenv("PRAMANA_REQUIRE_AUDIT") == "1" or os.getenv("PRAMANA_REQUIRE_BUNNY") == "1":
-                raise ValueError("Deployment requires authenticated audit configuration.")
-            if os.getenv("PRAMANA_AUDIT_KEYS") or os.getenv("PRAMANA_AUDIT_ACTIVE_KEY"):
-                raise ValueError("Audit encryption configuration requires audit identities.")
+                raise ValueError("Retained audit requires MongoDB and encryption configuration.")
             return
         if not settings.mongodb_uri:
-            raise ValueError("Authenticated audit requires MongoDB; memory fallback is not supported.")
-        self.auth = AuditAuth(identities) if identities else None
+            raise ValueError("Retained audit requires MongoDB; memory fallback is not supported.")
         cipher = SnapshotCipher(os.getenv("PRAMANA_AUDIT_KEYS", ""), os.getenv("PRAMANA_AUDIT_ACTIVE_KEY", ""))
         try:
             days = int(os.getenv("PRAMANA_AUDIT_RETENTION_DAYS", "30"))
         except ValueError:
             raise ValueError("Audit retention must be an integer from 1 to 90 days.") from None
         self.repository = AuditRepository(settings.mongodb_uri, settings.mongodb_db, cipher, days)
-        if identity_enabled:
-            # New identities never inherit shared history or legacy audit records.
-            self.repository.collection = self.repository.collection.database.get_collection("identity_reviews_v1",
-                write_concern=self.repository.collection.write_concern, read_concern=self.repository.collection.read_concern)
-            self.repository.files_collection = "identity_files_v1"
+        # Preserve historical private collections; new shared records stay separate.
+        self.repository.collection = self.repository.collection.database.get_collection("public_reviews_v1",
+            write_concern=self.repository.collection.write_concern, read_concern=self.repository.collection.read_concern)
+        self.repository.files_collection = "public_files_v1"
         if storage:
             self.files = RetainedFiles(self.repository, storage)
-            if identity_enabled:
-                # Preserve expiry cleanup without granting new identities access
-                # to legacy originals or copying their ownership.
-                self.legacy_files = RetainedFiles(self.repository, storage, collection_name="audit_files_v1")
+            self.legacy_files = [RetainedFiles(self.repository, storage, collection_name=name)
+                                 for name in ("audit_files_v1", "identity_files_v1")]
         if os.getenv("PRAMANA_REQUIRE_BUNNY") == "1" and self.files is None:
             raise ValueError("Deployment requires Bunny Storage configuration.")
 
@@ -103,14 +87,14 @@ class AuditRuntime:
             self.repository.start()
         if self.files:
             self.files.start()
-        if self.legacy_files:
-            self.legacy_files.start()
+        for files in self.legacy_files:
+            files.start()
 
     def sweep_files(self):
         if self.files:
             self.files.sweep()
-        if self.legacy_files:
-            self.legacy_files.sweep()
+        for files in self.legacy_files:
+            files.sweep()
 
     async def start_cleanup(self):
         if self.files:
@@ -170,18 +154,12 @@ class AuditRuntime:
         return self.store_analysis(identity, key, fingerprint, result)
 
     def router(self):
-        router = APIRouter(prefix="/api/audit", tags=["Authenticated audit"], route_class=AuditRoute,
-                           dependencies=[Depends(APIKeyCookie(name="__Host-pramana_session" if os.getenv("PRAMANA_COOKIE_SECURE", "1") != "0" else "pramana_local_session", auto_error=False))],
+        router = APIRouter(prefix="/api/audit", tags=["Retained audit"], route_class=AuditRoute,
                            responses={status: {"model": AuditError} for status in (401, 403, 404, 408, 409, 413, 422, 429, 503)})
         repository = self.repository
 
-        @router.get("/me")
-        def me(identity: Annotated[AuditPrincipal, Depends(principal)]):
-            return {"actor_id": identity.actor_id, "organization_id": identity.organization_id,
-                    "role": identity.role, "retention_days": repository.retention_days, "persistence": "mongodb_encrypted_audit"}
-
         @router.post("/reviews/analyze", response_model=AnalyzeResponse)
-        def analyze(request: AuditAnalyzeRequest, identity: Annotated[AuditPrincipal, Depends(reviewer)], key: Annotated[str, Depends(request_key)]):
+        def analyze(request: AuditAnalyzeRequest, identity: Annotated[AuditPrincipal, Depends(principal)], key: Annotated[str, Depends(request_key)]):
             if not request.draft_text.strip() or "\x00" in request.draft_text or any(0xD800 <= ord(c) <= 0xDFFF for c in request.draft_text):
                 raise HTTPException(422, "Draft must contain readable Unicode text.")
             fingerprint = digest(["text-v1", identity.actor_id, request.model_dump()])
@@ -189,7 +167,7 @@ class AuditRuntime:
 
         @router.post("/reviews/analyze-document", response_model=AnalyzeResponse)
         async def document(brand_id: Annotated[str, Form(min_length=1, max_length=100)], file: UploadFile,
-                           identity: Annotated[AuditPrincipal, Depends(reviewer)], key: Annotated[str, Depends(request_key)]):
+                           identity: Annotated[AuditPrincipal, Depends(principal)], key: Annotated[str, Depends(request_key)]):
             try:
                 content = await file.read(MAX_DOCX_BYTES + 1)
                 if len(content) > MAX_DOCX_BYTES:
@@ -202,20 +180,23 @@ class AuditRuntime:
                         if self.files:
                             self.files.save(identity, result.review_run_id, content)
                         return result
-                    extracted = extract_docx_bytes(file.filename, content)
+                    validate_docx_media_type(file.content_type)
+                    extracted = extract_docx_isolated(file.filename, content)
                     result = self.analyze(identity, key, fingerprint, brand_id, extracted.text, "docx", extracted.paragraph_count)
                     if self.files:
                         self.files.save(identity, result.review_run_id, content)
                     return result
                 return await run_in_threadpool(process)
-            except DocumentIntakeError:
-                raise HTTPException(422, "The DOCX could not be extracted safely.") from None
+            except DocumentIntakeTooLargeError as error:
+                raise HTTPException(413, str(error)) from None
+            except DocumentIntakeError as error:
+                raise HTTPException(422, str(error)) from None
             finally:
                 await file.close()
 
         @router.post("/intake/{extraction_id}/analyze", response_model=AnalyzeResponse)
         def confirmed_document(extraction_id: str, request: VersionRequest,
-                               identity: Annotated[AuditPrincipal, Depends(reviewer)], key: Annotated[str, Depends(request_key)],
+                               identity: Annotated[AuditPrincipal, Depends(principal)], key: Annotated[str, Depends(request_key)],
                                upload_token: Annotated[str, Header(alias="X-Intake-Token", min_length=1, max_length=256)]):
             fingerprint = digest(["intake-v1", identity.actor_id, extraction_id, request.model_dump()])
             existing = repository.existing(identity, key, fingerprint)
@@ -254,18 +235,9 @@ class AuditRuntime:
 
         @router.post("/reviews/{run_id}/decision", response_model=AuditEvent)
         def decision(run_id: str, request: AuditDecisionRequest,
-                     identity: Annotated[AuditPrincipal, Depends(reviewer)], key: Annotated[str, Depends(request_key)]):
+                     identity: Annotated[AuditPrincipal, Depends(principal)], key: Annotated[str, Depends(request_key)]):
             fingerprint = digest(["decision-v1", identity.actor_id, request.model_dump()])
             return repository.decision(identity, run_id, key, fingerprint, request.decision, request.expected_revision)
-
-        @router.delete("/reviews/{run_id}", status_code=204)
-        def delete(run_id: str, identity: Annotated[AuditPrincipal, Depends(principal)]):
-            if identity.role != "admin":
-                raise HTTPException(403, "Administrator access is required.")
-            if self.files:
-                self.files.delete(identity, run_id)
-            repository.delete(identity, run_id)
-            return Response(status_code=204)
 
         @router.get("/analytics/{brand_id}", response_model=AuditAnalytics)
         def analytics(brand_id: str, identity: Annotated[AuditPrincipal, Depends(principal)],

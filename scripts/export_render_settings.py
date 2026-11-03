@@ -7,11 +7,11 @@ from pathlib import Path
 def main():
     from dotenv import dotenv_values
     values = {**dotenv_values(".env"), **dotenv_values(".env.audit"), **dotenv_values(".env.bunny")}
-    names = ("MONGODB_URI", "MONGODB_DB", "PRAMANA_AUDIT_IDENTITIES", "PRAMANA_AUDIT_KEYS",
+    names = ("MONGODB_URI", "MONGODB_DB", "PRAMANA_AUDIT_KEYS",
         "PRAMANA_AUDIT_ACTIVE_KEY", "PRAMANA_AUDIT_RETENTION_DAYS", "BUNNY_STORAGE_HOST",
         "BUNNY_STORAGE_ZONE", "BUNNY_STORAGE_PASSWORD")
     exported = {k: values[k] for k in names if values.get(k)}
-    required = ("MONGODB_URI", "PRAMANA_AUDIT_IDENTITIES", "PRAMANA_AUDIT_KEYS", "PRAMANA_AUDIT_ACTIVE_KEY")
+    required = ("MONGODB_URI", "PRAMANA_AUDIT_KEYS", "PRAMANA_AUDIT_ACTIVE_KEY")
     if any(k not in exported for k in required):
         raise SystemExit("Required private MongoDB/audit configuration is missing.")
     exported.update(CORS_ORIGINS="https://pramana-frontend.onrender.com", PRAMANA_REQUIRE_MONGODB="1",

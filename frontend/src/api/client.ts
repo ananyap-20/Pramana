@@ -6,90 +6,20 @@
 
 const API_BASE = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://127.0.0.1:8000').replace(/\/+$/, '')
 
-export interface SessionIdentity {
-  actor_id: string
-  organization_id: string
-  role: 'reader' | 'reviewer' | 'admin'
-  email: string
-  expires_at: number
-  workspace: 'personal' | 'organization'
-}
-let sessionIdentity: SessionIdentity | null = null
-let sessionEpoch = 0
-const responseEpochs = new WeakMap<Response, number>()
-function checkResponseSession(response: Response) {
-  const epoch = responseEpochs.get(response)
-  if (epoch !== undefined && epoch !== sessionEpoch) throw new ApiError(409, 'The account changed. Retry from your current workspace.')
-}
-export function currentIdentity() { return sessionIdentity }
-
-export function setSessionIdentity(identity: SessionIdentity | null) {
-  const owner = identity ? `${identity.actor_id}:${identity.organization_id}` : ''
-  const previousOwner = sessionIdentity ? `${sessionIdentity.actor_id}:${sessionIdentity.organization_id}` : ''
-  if (owner !== previousOwner || !identity) sessionEpoch++
-  if (!owner || owner !== previousOwner) intakeTokens.clear()
-  try {
-    if (!owner || window.sessionStorage.getItem('pramana.identity-owner.v1') !== owner) {
-      clearCurrentReview()
-      intakeTokens.clear()
-      window.sessionStorage.removeItem(INTAKE_ACCESS_KEY)
-    }
-    window.sessionStorage.removeItem('pramana.audit-access.v1')
-    if (owner) window.sessionStorage.setItem('pramana.identity-owner.v1', owner)
-    else window.sessionStorage.removeItem('pramana.identity-owner.v1')
-  } catch { /* Browser storage may be unavailable. Server authorization remains authoritative. */ }
-  sessionIdentity = identity
-}
+let retainedAudit = false
+let retainedOriginals = false
+export function hasRetainedAudit() { return retainedAudit }
+export function hasRetainedOriginals() { return retainedOriginals }
 
 export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  const epoch = sessionEpoch
-  const headers = new Headers(options.headers)
-  const method = options.method ?? 'GET'
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-    const csrf = await fetch(`${API_BASE}/api/auth/csrf`, { credentials: 'include', cache: 'no-store', signal: options.signal })
-    const body = await handleResponse<{ csrf_token: string }>(csrf)
-    headers.set('X-CSRF-Token', body.csrf_token)
-  }
-  if (epoch !== sessionEpoch) throw new ApiError(409, 'The account changed. Retry from your current workspace.')
-  const response = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: 'include', cache: 'no-store' })
-  if (epoch !== sessionEpoch) throw new ApiError(409, 'The account changed. Retry from your current workspace.')
-  const context = response.headers.get('X-Pramana-Context')
-  if (context && sessionIdentity && context !== `${sessionIdentity.actor_id}:${sessionIdentity.organization_id}`) {
-    setSessionIdentity(null)
-    window.dispatchEvent(new Event('pramana:session-expired'))
-    throw new ApiError(409, 'Your workspace changed in another tab. Sign in again to continue.')
-  }
-  if (response.status === 401 && path !== '/api/auth/session') {
-    setSessionIdentity(null)
-    window.dispatchEvent(new Event('pramana:session-expired'))
-  }
-  if (response.ok) responseEpochs.set(response, epoch)
-  return response
+  return fetch(`${API_BASE}${path}`, { ...options, credentials: 'omit', cache: 'no-store' })
 }
 
-export async function restoreSession(): Promise<SessionIdentity | null> {
-  const epoch = sessionEpoch
-  const response = await apiFetch('/api/auth/session')
-  if (epoch !== sessionEpoch) throw new ApiError(409, 'The account changed. Retry the session check.')
-  if (response.status === 401) { setSessionIdentity(null); return null }
-  const identity = await handleResponse<SessionIdentity>(response)
-  setSessionIdentity(identity)
-  return identity
-}
-
-export async function exchangeIdentity(idToken: string) {
-  const response = await apiFetch('/api/auth/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_token: idToken }) })
-  if (!response.ok) await handleResponse(response)
-  return restoreSession()
-}
-
-export async function endSession() {
-  // Invalidate in-flight private responses before starting logout.
-  setSessionIdentity(null)
-  try {
-    const response = await apiFetch('/api/auth/logout', { method: 'POST' })
-    if (!response.ok) await handleResponse(response)
-  } finally { setSessionIdentity(null) }
+export async function getReadiness(signal?: AbortSignal): Promise<void> {
+  const ready = await handleResponse<{ status: string; audit: boolean; private_files?: boolean }>(await apiFetch('/ready', { signal }))
+  if (ready.status !== 'ok') throw new Error('The review service is not ready. Retry shortly.')
+  retainedAudit = ready.audit
+  retainedOriginals = ready.private_files === true
 }
 
 // ─── Response Types ────────────────────────────────────────────────────────
@@ -197,7 +127,7 @@ export interface ReviewRunSummary {
   draft_sha256?: string
 }
 
-const CURRENT_REVIEW_KEY = 'pramana.current-review.v1'
+const CURRENT_REVIEW_KEY = 'pramana.public-current-review.v1'
 
 /** Keep the current draft/result in this tab so review pages use the exact run. */
 export function saveCurrentReview(analysis: AnalyzeResponse): void {
@@ -217,7 +147,6 @@ export function clearCurrentReview(): void {
 }
 
 export function loadCurrentReview(): AnalyzeResponse | null {
-  if (!sessionIdentity) return null
   try {
     const stored = window.sessionStorage.getItem(CURRENT_REVIEW_KEY)
     if (!stored) return null
@@ -275,14 +204,13 @@ async function handleResponse<T>(res: Response): Promise<T> {
     throw new ApiError(res.status, detail)
   }
   const value = await res.json() as T
-  checkResponseSession(res)
   return value
 }
 
 // ─── API Functions ─────────────────────────────────────────────────────────
 
 export async function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
-  const res = await fetch(`${API_BASE}/health`, { signal, cache: 'no-store' })
+  const res = await apiFetch('/health', { signal })
   return handleResponse<HealthResponse>(res)
 }
 
@@ -292,17 +220,20 @@ export async function getDemoConfig(brandId: string, signal?: AbortSignal): Prom
 }
 
 export async function analyzeDraft(request: AnalyzeRequest, requestId: string = crypto.randomUUID()): Promise<AnalyzeResponse> {
-  return auditRequest('/reviews/analyze', { method: 'POST', body: JSON.stringify(request) }, requestId)
+  return hasRetainedAudit() ? auditRequest('/reviews/analyze', { method: 'POST', body: JSON.stringify(request) }, requestId)
+    : handleResponse<AnalyzeResponse>(await apiFetch('/api/reviews/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request) }))
 }
 
 export async function analyzeDocument(brandId: string, file: File, requestId: string = crypto.randomUUID()): Promise<AnalyzeResponse> {
   const form = new FormData()
   form.append('brand_id', brandId)
   form.append('file', file)
-  return auditRequest('/reviews/analyze-document', { method: 'POST', body: form }, requestId)
+  return hasRetainedAudit() ? auditRequest('/reviews/analyze-document', { method: 'POST', body: form }, requestId)
+    : handleResponse<AnalyzeResponse>(await apiFetch('/api/reviews/analyze-document', { method: 'POST', body: form }))
 }
 
 export async function getReviewHistory(brandId: string, signal?: AbortSignal): Promise<ReviewRunSummary[]> {
+  if (!hasRetainedAudit()) return handleResponse<ReviewRunSummary[]>(await apiFetch(`/api/reviews/history/${encodeURIComponent(brandId)}`, { signal }))
   const history = await auditRequest<AuditHistory>(`/reviews/history/${encodeURIComponent(brandId)}`, { signal })
   return history.records
 }
@@ -321,7 +252,11 @@ export async function submitReviewDecision(
     }, requestId)
     return { ...saved, review_run_id: reviewRunId }
   }
-  throw new ApiError(410, 'This legacy review is unavailable. Analyze the draft in your signed-in workspace.')
+  if (review?.document_provenance) return intakeRequest<ReviewDecisionResponse>(review.document_provenance.extraction_id,
+    `/reviews/${encodeURIComponent(reviewRunId)}/decision`, { decision })
+  return handleResponse<ReviewDecisionResponse>(await apiFetch(`/api/reviews/${encodeURIComponent(reviewRunId)}/decision`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision }),
+  }))
 }
 
 export interface ExtractedPage {
@@ -381,7 +316,7 @@ export interface DocumentProvenance {
 }
 
 const intakeTokens = new Map<string, { token: string; expires: number }>()
-const INTAKE_ACCESS_KEY = 'pramana.intake-access.v1'
+const INTAKE_ACCESS_KEY = 'pramana.public-intake-access.v1'
 
 function rememberAccess(id: string, token: string, expiresAt: string) {
   for (const [key, value] of intakeTokens) if (value.expires <= Date.now()) intakeTokens.delete(key)
@@ -413,7 +348,7 @@ export async function createExtraction(brandId: string, file: File, signal?: Abo
 }
 
 export async function intakeRequest<T>(id: string, suffix = '', body?: unknown, signal?: AbortSignal): Promise<T> {
-  if (suffix === '/analyze') {
+  if (suffix === '/analyze' && hasRetainedAudit()) {
     const access = intakeHeaders(id).Authorization.replace('Bearer ', '')
     const version = body as { version: number; text_sha256: string }
     return auditRequest<T>(`/intake/${encodeURIComponent(id)}/analyze`, {
@@ -433,24 +368,17 @@ export async function getExtractionPreview(id: string, page: number, signal?: Ab
   })
   if (!response.ok) await handleResponse(response)
   const value = await response.blob()
-  checkResponseSession(response)
   return value
 }
 
 export async function getActiveReviewHistory(review: AnalyzeResponse): Promise<ReviewRunSummary[]> {
   if (review.persistence === 'mongodb_encrypted_audit') return [await auditRequest(`/reviews/${encodeURIComponent(review.review_run_id)}`)]
-  throw new ApiError(410, 'Legacy review access is disabled.')
-}
-
-export interface AuditIdentity {
-  actor_id: string
-  organization_id: string
-  role: 'reader' | 'reviewer' | 'admin'
-  retention_days: number
+  if (review.document_provenance) return [await intakeRequest<ReviewRunSummary>(review.document_provenance.extraction_id,
+    `/reviews/${encodeURIComponent(review.review_run_id)}`)]
+  return getReviewHistory(review.brand_id)
 }
 
 export async function auditRequest<T>(path: string, options: RequestInit = {}, key?: string): Promise<T> {
-  if (!sessionIdentity) throw new ApiError(401, 'Sign in to continue.')
   const headers = new Headers(options.headers)
   if (typeof options.body === 'string') headers.set('Content-Type', 'application/json')
   if (key) headers.set('Idempotency-Key', key)
@@ -458,11 +386,9 @@ export async function auditRequest<T>(path: string, options: RequestInit = {}, k
 }
 
 export async function getRetainedOriginal(runId: string): Promise<Blob> {
-  if (!sessionIdentity) throw new ApiError(401, 'Sign in to download a retained original.')
   const response = await apiFetch(`/api/audit/reviews/${encodeURIComponent(runId)}/original`)
   if (!response.ok) await handleResponse(response)
   const value = await response.blob()
-  checkResponseSession(response)
   return value
 }
 
@@ -500,11 +426,14 @@ export interface VisualRequest {
   html: string
   css: string
   assets: VisualAsset[]
+  mode?: 'static_declarations' | 'rendered'
+  viewport_width?: number
+  viewport_height?: number
 }
 
 export interface VisualResponse {
   schema_version: '1.0'
-  mode: 'static_declarations'
+  mode: 'static_declarations' | 'rendered'
   brand_id: string
   draft_id: string
   draft_version: string
@@ -525,6 +454,11 @@ export interface VisualResponse {
     evidence: Record<string, string | number | boolean | null>
   }[]
   limitations: string[]
+  rendering: Record<string, string | number | boolean>
+}
+
+export async function getVisualDemo(): Promise<VisualRequest> {
+  return handleResponse<VisualRequest>(await apiFetch('/api/visual/demo'))
 }
 
 export async function analyzeVisual(request: VisualRequest): Promise<VisualResponse> {

@@ -1,10 +1,11 @@
 # PDF/image intake: local implementation and verification
 
+Current access: no account or session is required. Per-file capabilities, transcription confirmation, immutable versions and expiry remain in place. Optional shared retained-audit storage is described in [audit setup](audit-and-analytics.md).
+
 ## 3 November follow-up: import/configuration fixes
 
 The checked-in Render manifests now use the existing Docker runtime with Tesseract/English data and set `PRAMANA_ENABLE_LOCAL_INTAKE=1`. The setup example enables intake too; the application still honors an explicit `0` and defaults off when the variable is absent. Existing hosted services must apply these settings and redeploy; editing a manifest does not change a running service. No deployment was performed.
 
-The current authenticated flow uses a verified session cookie plus CSRF protection, with the extraction capability also bound to the user. Confirmed analysis goes through `/api/audit/intake/{id}/analyze` and saves the accepted text and receipts to the workspace audit repository. The original anonymous endpoints documented below describe the earlier implementation and are blocked by the current outer identity middleware.
 
 Verification: 16 existing PDF/image tests passed with real extraction/OCR. Three additional `test_identity_intake.py` acceptance cases exercised text-only, scanned and mixed PDFs through the actual identity/CSRF middleware, preview, confirmation, audit analysis and decision routes; cross-user access returned 404. Firebase verification and MongoDB were local test doubles; parsers and Tesseract were real. The full backend suite completed without failures; optional integration cases skipped when their external services were unavailable.
 
@@ -68,7 +69,7 @@ Multipart requests are bounded before parsing, with two simultaneous upload requ
 
 Original bytes, previews, versions, confirmations and PDF/image reviews live in bounded process memory. Processing files are removed after success, failure, timeout or cancellation. A periodic reaper clears retained data at expiry even without a client request. Abrupt host termination cannot promise secure erasure of underlying storage; use disposable protected storage and no confidential documents. Digests do not permit original-file replay after expiry/restart. Browser results use existing tab session storage; closing the tab clears it, and expired document reviews are rejected on load. This is not durable audit storage.
 
-Each upload receives a random bearer capability returned once; the server stores its digest. Requests bind extraction ID, version, text digest and possession of that capability. There is no authenticated identity or organization: actor is explicitly null / `anonymous_capability_holder`. These are possession checks, not production authorization. PDF/image drafts and review metadata never enter public shared history. Private endpoints use `Cache-Control: no-store`. Original download is an authenticated attachment; previews are sanitized rendered PNGs. The existing text/DOCX demo remains unauthenticated.
+Each upload receives a random bearer capability returned once; the server stores its digest. Requests bind extraction ID, version, text digest and possession of that capability. There is no authenticated identity or organization: actor is explicitly null / `anonymous_capability_holder`. These are possession checks, not production authorization. In metadata mode, PDF/image drafts and review metadata stay in the expiring capability store. In optional retained-audit mode, confirmed evaluated text and receipts enter the new shared audit workspace; all visitors can access those new retained reviews. Private endpoints use `Cache-Control: no-store`. Original download requires the per-file capability; previews are sanitized rendered PNGs. The existing text/DOCX demo remains unauthenticated.
 
 ## API contract
 

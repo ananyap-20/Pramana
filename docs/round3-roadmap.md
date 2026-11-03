@@ -1,6 +1,6 @@
 # Proposed Round 3 improvements
 
-These are proposals, not implemented features. Estimates assume one engineer familiar with the current code and exclude external review time.
+The original proposal is retained below for context. The bounded implementations and local acceptance evidence are now documented in [the three-feature verification report](mandatory-feature-verification.md). Current product decisions supersede the proposal's authentication and PostgreSQL assumptions: the user requested no accounts, MongoDB is the existing store, and new retained reviews are shared. No tenant-isolation or live-deployment claim is made.
 
 ## 1. Richer document and image intake
 
