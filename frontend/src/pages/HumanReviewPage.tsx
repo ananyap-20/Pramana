@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   getActiveReviewHistory,
+  getRetainedOriginal,
   auditRequest,
   loadCurrentReview,
   submitReviewDecision,
@@ -24,6 +25,8 @@ export function HumanReviewPage() {
   const [decisionHistory, setDecisionHistory] = useState<ReviewDecisionEvent[]>([])
   const [attested, setAttested] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+  const [originalError, setOriginalError] = useState('')
   const [error, setError] = useState('')
   const [revision, setRevision] = useState<number | undefined>()
   const [historyLoaded, setHistoryLoaded] = useState(false)
@@ -87,6 +90,25 @@ export function HumanReviewPage() {
     }
   }
 
+  async function downloadOriginal() {
+    if (!review || downloading) return
+    setDownloading(true)
+    setOriginalError('')
+    try {
+      const blob = await getRetainedOriginal(review.review_run_id)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      const kind = review.document_provenance?.file_type ?? review.input_type
+      const extension = ['docx', 'pdf', 'png', 'jpeg', 'jpg'].includes(kind) ? kind : 'bin'
+      link.href = url
+      link.download = `pramana-original.${extension}`
+      link.click()
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (err) {
+      setOriginalError(err instanceof ApiError ? `API error ${err.status}: ${err.detail}` : 'Could not download the retained original. Check the connection and retry.')
+    } finally { setDownloading(false) }
+  }
+
   const latestDecision = decisionHistory.length
     ? decisionHistory[decisionHistory.length - 1]
     : null
@@ -124,6 +146,11 @@ export function HumanReviewPage() {
             <h2>Submitted draft</h2>
             <p className="muted-copy">Exact text returned by the analysis run. {review.document_provenance ? 'Analyzed from the confirmed document transcription.' : review.input_type === 'docx' ? 'Extracted from an ordinary-paragraph DOCX.' : 'Submitted as plain text.'}</p>
             <pre className="draft-preview">{review.draft_text}</pre>
+            {durable && review.input_type !== 'text' && <>
+              <button className="secondary-button" disabled={downloading} onClick={() => { void downloadOriginal() }}>{downloading ? 'Downloading…' : 'Download retained original'}</button>
+              <p className="muted-copy">Requires configured private-file storage and an original retained for this run. Extraction previews may expire separately.</p>
+              {originalError && <p className="error-message" role="alert">{originalError}</p>}
+            </>}
           </section>
 
           <DocumentProvenance review={review} />

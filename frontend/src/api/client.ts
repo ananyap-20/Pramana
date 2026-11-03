@@ -192,13 +192,13 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 // ─── API Functions ─────────────────────────────────────────────────────────
 
-export async function getHealth(): Promise<HealthResponse> {
-  const res = await fetch(`${API_BASE}/health`)
+export async function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
+  const res = await fetch(`${API_BASE}/health`, { signal, cache: 'no-store' })
   return handleResponse<HealthResponse>(res)
 }
 
-export async function getDemoConfig(brandId: string): Promise<DemoConfigResponse> {
-  const res = await fetch(`${API_BASE}/api/demo/config/${encodeURIComponent(brandId)}`)
+export async function getDemoConfig(brandId: string, signal?: AbortSignal): Promise<DemoConfigResponse> {
+  const res = await fetch(`${API_BASE}/api/demo/config/${encodeURIComponent(brandId)}`, { signal, cache: 'no-store' })
   return handleResponse<DemoConfigResponse>(res)
 }
 
@@ -224,8 +224,8 @@ export async function analyzeDocument(brandId: string, file: File, requestId: st
   return handleResponse<AnalyzeResponse>(res)
 }
 
-export async function getReviewHistory(brandId: string): Promise<ReviewRunSummary[]> {
-  const res = await fetch(`${API_BASE}/api/reviews/history/${encodeURIComponent(brandId)}`)
+export async function getReviewHistory(brandId: string, signal?: AbortSignal): Promise<ReviewRunSummary[]> {
+  const res = await fetch(`${API_BASE}/api/reviews/history/${encodeURIComponent(brandId)}`, { signal, cache: 'no-store' })
   return handleResponse<ReviewRunSummary[]>(res)
 }
 
@@ -403,6 +403,15 @@ export async function auditRequest<T>(path: string, options: RequestInit = {}, k
   return handleResponse<T>(await fetch(`${API_BASE}/api/audit${path}`, { ...options, headers, cache: 'no-store' }))
 }
 
+export async function getRetainedOriginal(runId: string): Promise<Blob> {
+  if (!getAuditToken()) throw new ApiError(401, 'Connect your organization access key to download a retained original.')
+  const response = await fetch(`${API_BASE}/api/audit/reviews/${encodeURIComponent(runId)}/original`, {
+    headers: { Authorization: `Bearer ${getAuditToken()}` }, cache: 'no-store',
+  })
+  if (!response.ok) await handleResponse(response)
+  return response.blob()
+}
+
 export interface AuditHistory {
   records: ReviewRunSummary[]
   next_cursor: string | null
@@ -421,4 +430,53 @@ export interface AuditAnalytics {
   generated_at: string
   timezone: 'UTC'
   definition: string
+}
+
+// Mirrors backend/app/visual_models.py. Inputs remain inert; the UI never renders HTML.
+export interface VisualAsset {
+  asset_id: string
+  media_type: 'image/png' | 'image/jpeg'
+  content_base64: string
+}
+
+export interface VisualRequest {
+  brand_id: string
+  draft_id: string
+  draft_version: string
+  html: string
+  css: string
+  assets: VisualAsset[]
+}
+
+export interface VisualResponse {
+  schema_version: '1.0'
+  mode: 'static_declarations'
+  brand_id: string
+  draft_id: string
+  draft_version: string
+  input_sha256: string
+  manifest_version: string
+  manifest_sha256: string
+  source_id: string
+  source_version: string
+  source_excerpt: string
+  assets_sha256: Record<string, string>
+  findings: {
+    check: 'logo' | 'palette' | 'contrast' | 'alt_text'
+    rule_version: string
+    element: string
+    evidence_status: EvidenceStatus
+    result: string
+    explanation: string
+    evidence: Record<string, string | number | boolean | null>
+  }[]
+  limitations: string[]
+}
+
+export async function analyzeVisual(request: VisualRequest): Promise<VisualResponse> {
+  const body = JSON.stringify(request)
+  if (new Blob([body]).size > 768 * 1024) throw new ApiError(413, 'Visual request exceeds 768 KiB. Reduce the markup or assets.')
+  return handleResponse<VisualResponse>(await fetch(`${API_BASE}/api/visual/analyze`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body, cache: 'no-store',
+  }))
 }

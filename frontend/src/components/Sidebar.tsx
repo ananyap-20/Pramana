@@ -1,53 +1,20 @@
-interface NavItem {
-  path: string
-  label: string
-}
+import { Icon, type IconName } from './Icon'
 
-const NAV_ITEMS: NavItem[] = [
-  { path: 'draft-workspace', label: 'Draft workspace' },
-  { path: 'review-and-sign-off', label: 'Human review' },
-  { path: 'evidence-receipts', label: 'Evidence receipts' },
-  { path: 'audit-trail-and-history', label: 'Audit and analytics' },
-  { path: 'brand-guidelines-and-rules', label: 'Brand rules' },
+const NAV_ITEMS: { path: string; label: string; icon: IconName }[] = [
+  { path: 'draft-workspace', label: 'Draft Studio', icon: 'edit' },
+  { path: 'review-and-sign-off', label: 'Human Review', icon: 'check' },
+  { path: 'evidence-receipts', label: 'Evidence', icon: 'file' },
+  { path: 'audit-trail-and-history', label: 'Audit Trail', icon: 'history' },
+  { path: 'brand-guidelines-and-rules', label: 'Active Policies', icon: 'shield' },
+  { path: 'visual-checks', label: 'Visual Checks', icon: 'image' },
 ]
 
-interface SidebarProps {
-  activePath: string
-  onNavigate: (path: string) => void
-}
-
-export function Sidebar({ activePath, onNavigate }: SidebarProps) {
-  return (
-    <aside className="app-sidebar" aria-label="Main navigation">
-      <a className="app-brand" href="#/draft-workspace" onClick={(event) => { event.preventDefault(); onNavigate('draft-workspace') }}>
-        <span className="app-logo-mark" aria-hidden="true">P</span>
-        <span>
-          <strong>Pramana</strong>
-          <small>Brand governance demo</small>
-        </span>
-      </a>
-
-      <nav className="app-nav">
-        {NAV_ITEMS.map((item) => {
-          const isActive = activePath === item.path
-          return (
-            <a
-              key={item.path}
-              className={`app-nav-item${isActive ? ' is-active' : ''}`}
-              href={`#/${item.path}`}
-              aria-current={isActive ? 'page' : undefined}
-              onClick={(event) => { event.preventDefault(); onNavigate(item.path) }}
-            >
-              {item.label}
-            </a>
-          )
-        })}
-      </nav>
-
-      <div className="app-sidebar-footer">
-        <strong>LumaDesk</strong>
-        <span>Fictional brand · demo rules v1</span>
-      </div>
-    </aside>
-  )
+export function Sidebar({ activePath, onNavigate }: { activePath: string; onNavigate: (path: string) => void }) {
+  return <nav className="app-nav" aria-label="Main navigation">
+    {NAV_ITEMS.map((item) => <a key={item.path} className={`app-nav-item${activePath === item.path ? ' is-active' : ''}`}
+      href={`#/${item.path}`} aria-current={activePath === item.path ? 'page' : undefined}
+      onClick={(event) => { event.preventDefault(); onNavigate(item.path) }}>
+      <Icon name={item.icon} /><span>{item.label}</span>
+    </a>)}
+  </nav>
 }

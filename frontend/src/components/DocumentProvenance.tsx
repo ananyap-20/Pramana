@@ -11,7 +11,7 @@ export function DocumentProvenance({ review }: { review: AnalyzeResponse }) {
       <details><summary>File, text and extraction details</summary>
         <p>Original SHA-256: <code>{source.file_sha256}</code></p>
         <p>Accepted text SHA-256: <code>{source.text_sha256}</code></p>
-        <p>Original-file replay is available only until {new Date(source.original_available_until).toLocaleString()} while this server process remains running. A digest cannot replay a deleted file.</p>
+        <p>Temporary extraction replay expires {new Date(source.original_available_until).toLocaleString()} or on server restart. Optional organization original-file storage follows separate server retention. A digest cannot replay a deleted file.</p>
         <p>{Object.entries(source.tools).map(([name, value]) => `${name}: ${value}`).join(' · ')}</p>
       </details>
     </section>

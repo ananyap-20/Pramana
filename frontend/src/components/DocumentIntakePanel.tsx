@@ -142,7 +142,7 @@ export function DocumentIntakePanel({ file, brandId, onAnalyzed, onInvalidated }
     <div className="intake-panel">
       <h3>PDF / image transcription</h3>
       <p className="muted-copy">English printed text, upright pages. Up to 5 MiB, 10 PDF pages, 12 million pixels per page/image and 100,000 characters. Columns and tables need careful comparison; handwriting is outside this demo’s supported scope.</p>
-      <p className="muted-copy">Originals, previews and extraction versions expire after 15 minutes or a server restart. Use fictional files only.</p>
+      <p className="muted-copy">Extraction previews and working versions expire after 15 minutes or a server restart. Completed organization reviews follow audit retention; original-file retention depends on server configuration. Use fictional files for this prototype.</p>
       {(!job || job.state === 'failed' || job.state === 'expired') && (
         <button type="button" className="primary-button" disabled={!!busy} onClick={() => { void extract() }}>Extract text</button>
       )}

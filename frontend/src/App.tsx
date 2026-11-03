@@ -6,6 +6,8 @@ import { BrandGuidelinesPage } from './pages/BrandGuidelinesPage'
 import { DraftWorkspacePage } from './pages/DraftWorkspacePage'
 import { EvidenceReceiptsPage } from './pages/EvidenceReceiptsPage'
 import { HumanReviewPage } from './pages/HumanReviewPage'
+import { VisualChecksPage } from './pages/VisualChecksPage'
+import { GuidePage } from './pages/GuidePage'
 
 function getPageFromHash(): string {
   const hash = window.location.hash.replace(/^#\/?/, '')
@@ -44,13 +46,21 @@ export default function App() {
     case 'brand-guidelines-and-rules':
       content = <BrandGuidelinesPage />
       break
+    case 'visual-checks':
+      content = <VisualChecksPage />
+      break
+    case 'reviewer-access':
+      content = <AuditAccess />
+      break
+    case 'guide':
+      content = <GuidePage />
+      break
     default:
-      content = <DraftWorkspacePage />
+      content = <section className="empty-state"><h1>Page not found</h1><p>Choose a workspace from the navigation.</p><a className="primary-button" href="#/draft-workspace">Return to Draft Studio</a></section>
   }
 
   return (
     <Shell activePath={page} onNavigate={navigate}>
-      <AuditAccess />
       {content}
     </Shell>
   )
