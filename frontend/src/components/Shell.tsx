@@ -21,6 +21,6 @@ export function Shell({ activePath, children, onNavigate }: { activePath: string
     <TopBar />
     <main ref={main} id="main-content" className="app-content" tabIndex={-1}>{children}</main>
     <footer className="app-footer"><span><span className="status-dot" />LumaDesk · fictional demo brand</span><span>Evidence informs. Humans decide.</span><a href="#/brand-guidelines-and-rules">View active rules <Icon name="arrow" /></a></footer>
-    <Walkthrough />
+    <Walkthrough activePath={activePath} />
   </div>
 }

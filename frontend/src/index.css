@@ -292,8 +292,8 @@ textarea:not(.draft-editor) { width: 100%; resize: vertical; line-height: 1.6; }
 .draft-context { border: 0; border-left: 2px solid var(--border); border-radius: 0; background: transparent; }
 .guide-link { display: inline-flex; align-items: center; gap: .4rem; }
 .tour-dialog { position: fixed; inset: auto 1.5rem 1.5rem auto; margin: 0; width: min(27rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow: visible; padding: 1.5rem; border: 1px solid var(--border); border-radius: 8px; color: var(--ink); background: var(--paper); box-shadow: 0 12px 60px #0003; }
+.tour-dialog-animated { transition: top 220ms cubic-bezier(.2,.75,.25,1), left 220ms cubic-bezier(.2,.75,.25,1); }
 .tour-dialog::backdrop { background: #17160f66; }
-.tour-dialog-top { inset: 1rem 1.5rem auto auto; }
 .tour-dialog h2 { font-size: 1.5rem; }
 .tour-dialog p { font-size: .875rem; }
 .tour-dialog .eyebrow { font-size: .65rem; }
@@ -313,8 +313,9 @@ textarea:not(.draft-editor) { width: 100%; resize: vertical; line-height: 1.6; }
   .editor-footer > span { flex: 1 1 10rem; }
   .decision-actions > .primary-button, .decision-actions > .secondary-button, .decision-actions > .accent-button { flex: 1 1 auto; }
   .tour-dialog { right: 1rem; bottom: 1rem; padding: 1.1rem; }
-  .tour-dialog-top { top: 1rem; bottom: auto; }
 }
+
+@media (prefers-reduced-motion: reduce) { .tour-dialog-animated { transition: none; } }
 
 .welcome-layer { min-height: 100svh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem; background: var(--paper, #fcf9f2); opacity: 1; transition: opacity 220ms ease-out; }
 .welcome-logo { width: clamp(5rem, 12vw, 7rem); height: auto; margin-bottom: 1.5rem; }

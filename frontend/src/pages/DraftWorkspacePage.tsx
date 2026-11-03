@@ -89,7 +89,7 @@ export function DraftWorkspacePage() {
         <div className="editor-toolbar" data-tour="draft-actions">
           <div className="decision-actions"><button className="secondary-button" data-tour="import" onClick={() => fileInputRef.current?.click()} disabled={busy}><Icon name="upload" />Import file</button>
             {file && <button className="text-button" disabled={busy} onClick={() => { setFile(null); invalidate(); if (fileInputRef.current) fileInputRef.current.value = '' }}>Remove file</button>}</div>
-          {!isPdfImage && <button className="accent-button" onClick={() => { void handleAnalyze() }} disabled={busy || (!file && !draftText.trim())}>{busy ? 'Analyzing…' : 'Analyze draft'}<Icon name="arrow" /></button>}
+          {!isPdfImage && <button className="accent-button" data-tour="analyze" onClick={() => { void handleAnalyze() }} disabled={busy || (!file && !draftText.trim())}>{busy ? 'Analyzing…' : 'Analyze draft'}<Icon name="arrow" /></button>}
           <input ref={fileInputRef} type="file" aria-label="Upload document or image" accept=".docx,.pdf,.png,.jpg,.jpeg" hidden onChange={selectFile} />
         </div>
         <p className="ledger-caption">DOCX, PDF, PNG or JPEG · up to 5 MiB. PDF/image intake requires backend configuration and transcription confirmation.</p>
@@ -99,7 +99,7 @@ export function DraftWorkspacePage() {
         {errorMsg && <div className="error-box" role="alert"><p className="error-message">{errorMsg}</p><p className="muted-copy">Your input is still available. Resolve the error and retry.</p></div>}
         {busy && <div className="empty-state" role="status"><Icon name="search" /><h3>Checking your manuscript</h3><p>Evaluating the submitted version against the configured rules and validating its evidence.</p></div>}
         {!busy && !result && <div className="empty-state"><Icon name="shield" /><h3>A second pair of eyes.</h3><p>Run a review to see findings here. Every returned receipt identifies the rule, source version and exact draft passage where applicable.</p><a href="#/guide">How review works</a></div>}
-        {result && <><div className="review-panel"><p className="eyebrow">Analysis complete · human review required</p><h3>{result.findings.length ? 'A few things to look at.' : 'No findings from the seeded checks.'}</h3>
+        {result && <><div className="review-panel" data-tour="analysis-results"><p className="eyebrow">Analysis complete · human review required</p><h3>{result.findings.length ? 'A few things to look at.' : 'No findings from the seeded checks.'}</h3>
           <p className="muted-copy">This result covers the configured rules. It does not establish general compliance or approve publication.</p><code>Run {result.review_run_id} · {result.draft_version}</code></div>
           <div className="review-findings">{result.findings.map((finding, index) => <FindingCard key={finding.finding_id} finding={finding} collapsible initiallyOpen={index === 0} />)}</div>
           <div className="decision-actions"><a className="primary-button" href="#/review-and-sign-off">Continue to human review<Icon name="arrow" /></a><a className="secondary-button" href="#/evidence-receipts">Inspect evidence</a></div></>}
