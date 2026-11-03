@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.domain import EvidenceReceipt, ReviewDecisionRecord, ReviewRecord
+from app.intake_models import DocumentProvenance
 
 # Typed literals matching domain enums for API contract safety.
 CategoryLiteral = Literal[
@@ -107,6 +108,8 @@ class AnalyzeResponse(BaseModel):
     draft_text: str
     paragraph_count: int | None = None
     findings: list[EvidenceReceiptResponse]
+    document_provenance: DocumentProvenance | None = None
+    offset_unit: Literal["unicode_code_points"] = "unicode_code_points"
 
 
 ReviewDecisionLiteral = Literal["approved", "revision", "rejected"]

@@ -1,0 +1,15 @@
+*
+!Dockerfile
+!pyproject.toml
+!uv.lock
+!README.md
+!backend/
+!backend/app/
+!backend/app/**
+!backend/tests/
+!backend/tests/**
+!scripts/
+!scripts/verify_intake.py
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/

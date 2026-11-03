@@ -260,6 +260,15 @@
 .decision-history li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; }
 .decision-history time, .history-card time { color: #52636d; font-size: 0.8rem; }
 .error-message { color: #93000a; font-size: 0.9rem; }
+.intake-panel { display: flex; flex-direction: column; gap: 0.8rem; min-width: 0; }
+.intake-panel h3, .intake-panel h4, .intake-panel p { margin: 0; }
+.intake-page { border-top: 1px solid #d8e0e5; padding-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.intake-page img { display: block; max-width: 100%; max-height: 26rem; margin: auto; border: 1px solid #d8e0e5; }
+.intake-page textarea { box-sizing: border-box; width: 100%; resize: vertical; padding: 0.75rem; border: 1px solid #8b9aa3; border-radius: 0.5rem; font: inherit; line-height: 1.5; }
+.intake-page textarea:focus { outline: 2px solid #19648f; outline-offset: 2px; }
+.intake-warnings { margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: #654d12; line-height: 1.5; }
+.intake-provenance { overflow-wrap: anywhere; font-size: 0.85rem; line-height: 1.6; }
+.intake-provenance summary { color: #004967; cursor: pointer; }
 .loading-copy { color: #52636d; }
 .empty-inline { color: #52636d; line-height: 1.5; }
 

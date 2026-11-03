@@ -25,5 +25,8 @@ Verified on 2026-10-29 against the locally prepared project copy. Backend run: *
 
 - The browser check used the local demo and fictional sample content. It did not exercise a public deployment.
 - The frontend API uses `VITE_API_BASE_URL`; production URL wiring is prepared but not connected to a deployed service.
-- PDF/image/table/OCR behavior is not tested because those inputs are explicitly unsupported.
+- At the historical checkpoint, PDF/image/table/OCR behavior was unsupported. See the dated update below for the new intake tests.
 - No precision/recall or latency claim is supported by this dataset.
+# PDF/image update — 3 November 2026
+
+The historical results above predate PDF/image intake. Fresh commands, measurements, actual results and release blockers are in [PDF/image verification](pdf-image-intake-verification.md); detailed safety coverage and reproduction are in [the intake guide](pdf-image-intake.md).

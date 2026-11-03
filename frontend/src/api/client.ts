@@ -76,6 +76,8 @@ export interface AnalyzeResponse {
   draft_text: string
   paragraph_count?: number
   findings: EvidenceReceiptResponse[]
+  document_provenance?: DocumentProvenance | null
+  offset_unit?: 'unicode_code_points'
 }
 
 export type ReviewDecision = 'approved' | 'revision' | 'rejected'
@@ -126,6 +128,10 @@ export function loadCurrentReview(): AnalyzeResponse | null {
     const stored = window.sessionStorage.getItem(CURRENT_REVIEW_KEY)
     if (!stored) return null
     const candidate = JSON.parse(stored) as Partial<AnalyzeResponse>
+    if (candidate.document_provenance && Date.parse(candidate.document_provenance.original_available_until) <= Date.now()) {
+      clearCurrentReview()
+      return null
+    }
     if (
       typeof candidate.review_run_id !== 'string' ||
       typeof candidate.draft_text !== 'string' ||
@@ -168,7 +174,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
     let detail = `HTTP ${res.status}`
     try {
       const body = await res.json()
-      detail = body?.detail ?? detail
+      detail = typeof body?.detail === 'string' ? body.detail : 'The request was invalid. Check the file and transcription limits.'
     } catch {
       // ignore parse errors
     }
@@ -217,11 +223,128 @@ export async function getReviewHistory(brandId: string): Promise<ReviewRunSummar
 export async function submitReviewDecision(
   reviewRunId: string,
   decision: ReviewDecision,
+  review?: AnalyzeResponse,
 ): Promise<ReviewDecisionResponse> {
+  if (review?.document_provenance) {
+    return intakeRequest(review.document_provenance.extraction_id,
+      `/reviews/${encodeURIComponent(reviewRunId)}/decision`, { decision })
+  }
   const res = await fetch(`${API_BASE}/api/reviews/${encodeURIComponent(reviewRunId)}/decision`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ decision }),
   })
   return handleResponse<ReviewDecisionResponse>(res)
+}
+
+export interface ExtractedPage {
+  page: number
+  text: string
+  start: number
+  end: number
+  method: 'pdf_text' | 'ocr' | 'human_edited'
+  width: number
+  height: number
+  coordinates: 'pdf_points_bottom_left' | 'pixels_top_left' | 'none'
+  rotation: number
+  regions: { start: number; end: number; bounds: number[] | null; confidence: number | null }[]
+  warnings: string[]
+}
+
+export interface ExtractionVersion {
+  version: number
+  text_sha256: string
+  text: string
+  pages: ExtractedPage[]
+  human_edited: boolean
+  parent_version: number | null
+  created_at: string
+}
+
+export interface ExtractionResponse {
+  extraction_id: string
+  state: 'queued' | 'processing' | 'needs_confirmation' | 'ready' | 'failed' | 'expired'
+  filename: string
+  file_type: string
+  file_sha256: string
+  expires_at: string
+  current: ExtractionVersion | null
+  confirmation: { version: number; text_sha256: string; confirmed_at: string; actor: null; actor_kind: string } | null
+  warnings: string[]
+  error: string | null
+  tools: Record<string, string>
+  settings: Record<string, string | number>
+  extraction_seconds: number | null
+}
+
+export interface DocumentProvenance {
+  extraction_id: string
+  file_sha256: string
+  file_type: string
+  version: number
+  text_sha256: string
+  human_edited: boolean
+  confirmed_at: string
+  actor: null
+  actor_kind: string
+  original_available_until: string
+  tools: Record<string, string>
+  settings: Record<string, string | number>
+  pages: ExtractedPage[]
+}
+
+const intakeTokens = new Map<string, { token: string; expires: number }>()
+const INTAKE_ACCESS_KEY = 'pramana.intake-access.v1'
+
+function rememberAccess(id: string, token: string, expiresAt: string) {
+  for (const [key, value] of intakeTokens) if (value.expires <= Date.now()) intakeTokens.delete(key)
+  intakeTokens.set(id, { token, expires: Date.parse(expiresAt) })
+  try { window.sessionStorage.setItem(INTAKE_ACCESS_KEY, JSON.stringify([...intakeTokens])) } catch { /* Memory access still works. */ }
+}
+
+function intakeHeaders(id: string): Record<string, string> {
+  if (!intakeTokens.has(id)) {
+    try {
+      const saved = JSON.parse(window.sessionStorage.getItem(INTAKE_ACCESS_KEY) ?? '[]') as [string, { token: string; expires: number }][]
+      for (const [key, value] of saved) if (value.expires > Date.now()) intakeTokens.set(key, value)
+    } catch { /* Missing access is reported below. */ }
+  }
+  const access = intakeTokens.get(id)
+  if (!access || access.expires <= Date.now()) throw new ApiError(410, 'Extraction access expired. Upload the original again.')
+  return { Authorization: `Bearer ${access.token}` }
+}
+
+export async function createExtraction(brandId: string, file: File, signal?: AbortSignal): Promise<ExtractionResponse> {
+  const form = new FormData()
+  form.append('brand_id', brandId)
+  form.append('file', file)
+  const response = await handleResponse<ExtractionResponse & { access_token: string }>(await fetch(`${API_BASE}/api/intake`, {
+    method: 'POST', body: form, signal,
+  }))
+  rememberAccess(response.extraction_id, response.access_token, response.expires_at)
+  return response
+}
+
+export async function intakeRequest<T>(id: string, suffix = '', body?: unknown, signal?: AbortSignal): Promise<T> {
+  return handleResponse<T>(await fetch(`${API_BASE}/api/intake/${encodeURIComponent(id)}${suffix}`, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: { ...intakeHeaders(id), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
+    body: body === undefined ? undefined : JSON.stringify(body), signal, cache: 'no-store',
+  }))
+}
+
+export async function getExtractionPreview(id: string, page: number, signal?: AbortSignal): Promise<Blob> {
+  const response = await fetch(`${API_BASE}/api/intake/${encodeURIComponent(id)}/pages/${page}/preview`, {
+    headers: intakeHeaders(id), signal, cache: 'no-store',
+  })
+  if (!response.ok) await handleResponse(response)
+  return response.blob()
+}
+
+export async function getActiveReviewHistory(review: AnalyzeResponse): Promise<ReviewRunSummary[]> {
+  if (review.document_provenance) {
+    return [await intakeRequest<ReviewRunSummary>(review.document_provenance.extraction_id,
+      `/reviews/${encodeURIComponent(review.review_run_id)}`)]
+  }
+  return getReviewHistory(review.brand_id)
 }

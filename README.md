@@ -2,12 +2,12 @@
 
 Pramana is a small brand-governance demo. It checks a draft against a fictional brand's approved terminology, prohibited phrase, one plan fact, and disclaimer rule. Each returned finding includes a rule and source reference; a human can inspect the receipt and record a review decision.
 
-**Status:** local demo verified on 2026-10-29. It is not a production service and does not provide general-purpose fact checking, authentication, durable audit storage, or legal review.
+**Status:** PDF/image intake is implemented as an opt-in local prototype (3 November 2026). See [setup, API, limits and release gates](docs/pdf-image-intake.md) and [fresh verification](docs/pdf-image-intake-verification.md). It is not a production service and does not provide general-purpose fact checking, authentication, durable audit storage, or legal review.
 
 ## What works
 
 - React, TypeScript, and Vite frontend connected to a FastAPI API.
-- Paste text or upload a `.docx` containing ordinary paragraphs. Plain `.txt`, `.md`, `.pdf`, image, table, and OCR intake are not supported.
+- Paste text or upload a `.docx` containing ordinary paragraphs. Opt-in PDF/PNG/JPEG intake adds local OCR, page previews, transcription correction and mandatory confirmation before analysis. See the linked limits; complex layout reconstruction is not promised.
 - Four deterministic checks for the fictional LumaDesk brand, with version-pinned rules, sources, excerpts, and candidate validation.
 - Evidence Receipts display the exact evaluated draft and matching passage when applicable.
 - Reviewer can record `approved`, `revision`, or `rejected`; history shows finding counts and decision events.

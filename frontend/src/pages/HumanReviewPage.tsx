@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  getReviewHistory,
+  getActiveReviewHistory,
   loadCurrentReview,
   submitReviewDecision,
   ApiError,
@@ -9,8 +9,7 @@ import {
   type ReviewDecisionEvent,
 } from '../api/client'
 import { FindingCard } from '../components/FindingCard'
-
-const DEMO_BRAND_ID = 'lumadesk'
+import { DocumentProvenance } from '../components/DocumentProvenance'
 
 const DECISIONS: { value: ReviewDecision; label: string; description: string }[] = [
   { value: 'approved', label: 'Approve', description: 'Human reviewer accepts this draft.' },
@@ -28,7 +27,7 @@ export function HumanReviewPage() {
   useEffect(() => {
     if (!review) return
     let cancelled = false
-    getReviewHistory(DEMO_BRAND_ID)
+    getActiveReviewHistory(review)
       .then((records) => {
         if (!cancelled) {
           const record = records.find((item) => item.review_run_id === review.review_run_id)
@@ -46,7 +45,7 @@ export function HumanReviewPage() {
     setSaving(true)
     setError('')
     try {
-      const saved = await submitReviewDecision(review.review_run_id, decision)
+      const saved = await submitReviewDecision(review.review_run_id, decision, review)
       setDecisionHistory((current) => [...current, saved])
     } catch (err) {
       setError(err instanceof ApiError ? `API error ${err.status}: ${err.detail}` : 'Could not save the decision.')
@@ -78,7 +77,7 @@ export function HumanReviewPage() {
       ) : (
         <>
           <div className="demo-notice" role="note">
-            Demo decisions are unauthenticated and held in shared process memory. They are review records for this demonstration, not verified identities or legal approvals.
+            Demo decisions are unauthenticated and temporary. PDF/image decisions require this upload’s access token and expire with the extraction. These records do not establish a verified identity or legal approval.
           </div>
 
           <section className="review-summary" aria-label="Review run summary">
@@ -90,9 +89,11 @@ export function HumanReviewPage() {
 
           <section className="review-panel">
             <h2>Submitted draft</h2>
-            <p className="muted-copy">Exact text returned by the analysis run. {review.input_type === 'docx' ? 'Extracted from an ordinary-paragraph DOCX.' : 'Submitted as plain text.'}</p>
+            <p className="muted-copy">Exact text returned by the analysis run. {review.document_provenance ? 'Analyzed from the confirmed document transcription.' : review.input_type === 'docx' ? 'Extracted from an ordinary-paragraph DOCX.' : 'Submitted as plain text.'}</p>
             <pre className="draft-preview">{review.draft_text}</pre>
           </section>
+
+          <DocumentProvenance review={review} />
 
           <section className="review-panel">
             <h2>Evidence to review <span className="count-pill">{review.findings.length}</span></h2>

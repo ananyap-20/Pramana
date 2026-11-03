@@ -1,5 +1,6 @@
 import { loadCurrentReview } from '../api/client'
 import { FindingCard } from '../components/FindingCard'
+import { DocumentProvenance, FindingPageContext } from '../components/DocumentProvenance'
 
 export function EvidenceReceiptsPage() {
   const review = loadCurrentReview()
@@ -28,6 +29,7 @@ export function EvidenceReceiptsPage() {
             <div><span className="summary-label">Validated findings</span><strong>{review.findings.length}</strong></div>
           </section>
 
+          <DocumentProvenance review={review} />
           {review.findings.length === 0 ? (
             <section className="empty-state">
               <h2>No findings returned</h2>
@@ -38,6 +40,7 @@ export function EvidenceReceiptsPage() {
               {review.findings.map((finding) => (
                 <article className="receipt-item" key={finding.finding_id}>
                   <FindingCard finding={finding} expanded />
+                  {finding.location && <FindingPageContext review={review} location={finding.location} />}
                   {finding.location ? (
                     <DraftContext draftText={review.draft_text} start={finding.location.start} end={finding.location.end} />
                   ) : (
@@ -57,11 +60,13 @@ export function EvidenceReceiptsPage() {
 }
 
 function DraftContext({ draftText, start, end }: { draftText: string; start: number; end: number }) {
+  // API spans count Unicode code points; JS string slicing counts UTF-16 units.
+  const characters = Array.from(draftText)
   const contextStart = Math.max(0, start - 70)
-  const contextEnd = Math.min(draftText.length, end + 70)
-  const before = draftText.slice(contextStart, start)
-  const quote = draftText.slice(start, end)
-  const after = draftText.slice(end, contextEnd)
+  const contextEnd = Math.min(characters.length, end + 70)
+  const before = characters.slice(contextStart, start).join('')
+  const quote = characters.slice(start, end).join('')
+  const after = characters.slice(end, contextEnd).join('')
 
   return (
     <div className="draft-context">
@@ -70,7 +75,7 @@ function DraftContext({ draftText, start, end }: { draftText: string; start: num
         <span>Characters {start}–{end}</span>
       </div>
       <p>
-        {contextStart > 0 ? '…' : ''}{before}<mark>{quote}</mark>{after}{contextEnd < draftText.length ? '…' : ''}
+        {contextStart > 0 ? '…' : ''}{before}<mark>{quote}</mark>{after}{contextEnd < characters.length ? '…' : ''}
       </p>
     </div>
   )

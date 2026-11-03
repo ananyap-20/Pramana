@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
 from app.config import get_settings
+from app.intake_api import IntakeBodyLimitMiddleware, build_intake_router
+from app.services.extraction_store import ExtractionStore, IntakeProblem
 from app.domain import ReviewDecision
 from app.repositories.demo_repository import (
     InMemoryDemoRepository,
@@ -37,18 +41,36 @@ from app.services.document_intake import (
 def create_app() -> FastAPI:
     settings = get_settings()
     repository = InMemoryDemoRepository()
+    intake = ExtractionStore(settings)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        await intake.start()
+        try:
+            yield
+        finally:
+            await intake.close()
+
     app = FastAPI(
         title="Pramana Day 1 Demo API",
         version="0.1.0",
         description="Fictional deterministic evidence-validation demo. Not durable persistence.",
+        lifespan=lifespan,
     )
+    app.state.intake = intake
+    app.add_middleware(IntakeBodyLimitMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(settings.cors_origins),
         allow_credentials=False,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", "Authorization"],
     )
+    app.include_router(build_intake_router(intake))
+
+    @app.exception_handler(IntakeProblem)
+    async def intake_problem(request, error: IntakeProblem):
+        return JSONResponse({"detail": str(error)}, status_code=error.status)
 
     @app.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:

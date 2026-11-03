@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   analyzeDocument,
   analyzeDraft,
@@ -8,6 +8,7 @@ import {
   type AnalyzeResponse,
 } from '../api/client'
 import { FindingCard } from '../components/FindingCard'
+import { DocumentIntakePanel } from '../components/DocumentIntakePanel'
 
 const DEMO_BRAND_ID = 'lumadesk'
 
@@ -25,9 +26,22 @@ export function DraftWorkspacePage() {
   const [docxFile, setDocxFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const submittingRef = useRef(false)
+  const isPdfImage = !!docxFile && !docxFile.name.toLowerCase().endsWith('.docx')
+  const invalidate = useCallback(() => {
+    setResult(null)
+    clearCurrentReview()
+    setSubmitState('idle')
+  }, [])
+
+  function acceptDocumentAnalysis(response: AnalyzeResponse) {
+    saveCurrentReview(response)
+    setResult(response)
+    setDraftText(response.draft_text)
+    setSubmitState('done')
+  }
 
   async function handleAnalyze() {
-    if (submittingRef.current) return
+    if (submittingRef.current || isPdfImage) return
     submittingRef.current = true
     clearCurrentReview()
     setSubmitState('loading')
@@ -67,8 +81,8 @@ export function DraftWorkspacePage() {
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null
-    if (file && !file.name.toLowerCase().endsWith('.docx')) {
-      setErrorMsg('Only .docx files are accepted.')
+    if (file && !/\.(docx|pdf|png|jpe?g)$/i.test(file.name)) {
+      setErrorMsg('Choose a DOCX, PDF, PNG or JPEG file.')
       setDocxFile(null)
       setResult(null)
       clearCurrentReview()
@@ -76,7 +90,7 @@ export function DraftWorkspacePage() {
       return
     }
     if (file && file.size > 5 * 1024 * 1024) {
-      setErrorMsg('The .docx file must be 5 MiB or smaller.')
+      setErrorMsg('The file must be 5 MiB or smaller.')
       setDocxFile(null)
       setResult(null)
       clearCurrentReview()
@@ -112,7 +126,7 @@ export function DraftWorkspacePage() {
       </div>
 
       <div className="demo-notice" role="note">
-        Public, unauthenticated demo: use fictional, non-sensitive copy only. The current draft stays in this browser tab. Shared history contains run IDs, finding counts, and human decisions, and resets when the service restarts.
+        Unauthenticated demo: use fictional, non-sensitive copy only. PDF/image originals and transcriptions are held temporarily for confirmation and expire after 15 minutes. Their reviews stay outside shared history. Text/DOCX history remains shared and resets when the service restarts.
       </div>
 
       {/* Draft meta bar */}
@@ -149,6 +163,7 @@ export function DraftWorkspacePage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <button
             onClick={() => fileInputRef.current?.click()}
+            disabled={submitState === 'loading'}
             style={{
               height: '2.5rem',
               padding: '0 1rem',
@@ -166,18 +181,20 @@ export function DraftWorkspacePage() {
             }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#19648f' }}>upload_file</span>
-            {docxFile ? docxFile.name : 'Upload .docx'}
+            {docxFile ? docxFile.name : 'Upload document or image'}
           </button>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            aria-label="Upload document or image"
+            accept=".docx,.pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             style={{ display: 'none' }}
             onChange={handleFileChange}
           />
           {docxFile && (
             <button
-              onClick={() => { setDocxFile(null); setResult(null); clearCurrentReview(); setSubmitState('idle'); }}
+              disabled={submitState === 'loading'}
+              onClick={() => { setDocxFile(null); setResult(null); clearCurrentReview(); setSubmitState('idle'); if (fileInputRef.current) fileInputRef.current.value = '' }}
               style={{
                 height: '2.5rem',
                 padding: '0 1rem',
@@ -194,7 +211,7 @@ export function DraftWorkspacePage() {
               Clear file
             </button>
           )}
-          <button
+          {!isPdfImage && <button
             onClick={handleAnalyze}
             disabled={submitState === 'loading'}
             style={{
@@ -222,7 +239,7 @@ export function DraftWorkspacePage() {
               {submitState === 'loading' ? 'sync' : 'play_arrow'}
             </span>
             {submitState === 'loading' ? 'Analysing…' : 'Analyse draft'}
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -266,7 +283,10 @@ export function DraftWorkspacePage() {
               boxShadow: '0 1px 3px rgba(10, 42, 58, 0.04)',
             }}
           >
-            {docxFile ? (
+            {docxFile && isPdfImage ? (
+              <DocumentIntakePanel key={`${docxFile.name}-${docxFile.lastModified}-${docxFile.size}`} file={docxFile} brandId={brandId}
+                onAnalyzed={acceptDocumentAnalysis} onInvalidated={invalidate} />
+            ) : docxFile ? (
               <div
                 style={{
                   padding: '3rem',
@@ -292,6 +312,8 @@ export function DraftWorkspacePage() {
               <>
                 <textarea
                   value={draftText}
+                  aria-label="Draft text"
+                  disabled={submitState === 'loading'}
                   maxLength={100_000}
                   onChange={(e) => { setDraftText(e.target.value); setResult(null); clearCurrentReview(); setSubmitState('idle') }}
                   placeholder="Paste or type your draft here…"
