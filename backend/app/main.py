@@ -63,8 +63,10 @@ def create_app() -> FastAPI:
             except PyMongoError:
                 raise StorageUnavailableError("MongoDB is unavailable. Check credentials and Atlas network access.") from None
             await intake.start()
+            await audit.start_cleanup()
             yield
         finally:
+            await audit.stop_cleanup()
             await intake.close()
             await run_in_threadpool(repository.close)
             await run_in_threadpool(audit.close)
@@ -112,6 +114,18 @@ def create_app() -> FastAPI:
     def health() -> HealthResponse:
         repository.check_ready()
         return HealthResponse(status="ok", persistence=repository.persistence)
+
+    @app.get("/ready")
+    def ready():
+        repository.check_ready()
+        if audit.repository:
+            audit.repository.client.admin.command("ping")
+        if audit.files:
+            audit.files.storage.check_ready()
+        if audit.cleanup_failed:
+            raise HTTPException(503, "Private file cleanup requires operator attention.")
+        return {"status": "ok", "persistence": repository.persistence,
+                "audit": audit.repository is not None, "private_files": audit.files is not None}
 
     @app.get("/api/demo/config/{brand_id}", response_model=DemoConfigResponse)
     def demo_config(brand_id: str) -> DemoConfigResponse:

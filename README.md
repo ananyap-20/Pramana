@@ -48,6 +48,8 @@ Never put a real `.env` file, credentials, or secrets in Git. Shared demo APIs r
 
 ## Deployment preparation
 
+MongoDB/audit and private Bunny original-file deployment: see [storage setup and actual verification](docs/storage-deployment.md). New deployment checks are `/ready` and `scripts/check_audit_deployment.py`; Bunny integration requires a separately configured private Storage zone and live verification.
+
 The backend and frontend are configured together in [`render.yaml`](render.yaml). The clean project is published publicly at [github.com/ananyap-20/Pramana](https://github.com/ananyap-20/Pramana) on `main`; no hosting service has been created yet.
 
 1. Create the Render Blueprint from the repository root; it defines a free Python API web service and a free static frontend.

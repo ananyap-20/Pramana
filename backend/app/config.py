@@ -32,6 +32,8 @@ def get_settings() -> Settings:
 
     database_url = os.getenv("DATABASE_URL")
     mongodb_uri = os.getenv("MONGODB_URI")
+    if os.getenv("PRAMANA_REQUIRE_MONGODB") == "1" and not mongodb_uri:
+        raise ValueError("Deployment requires MONGODB_URI; memory storage is disabled.")
     if mongodb_uri is not None:
         mongodb_uri = mongodb_uri.strip()
         if not mongodb_uri.startswith(("mongodb+srv://", "mongodb://")):

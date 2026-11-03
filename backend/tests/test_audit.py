@@ -29,6 +29,51 @@ def encryption():
     return SnapshotCipher(json.dumps({"test": base64.b64encode(secrets.token_bytes(32)).decode()}), "test")
 
 
+def test_private_original_survives_restart_and_rejects_other_organization(audit_environment, monkeypatch):
+    tokens, database, _ = audit_environment
+    objects = {}
+
+    class Storage:
+        def check_ready(self):
+            pass
+
+        def request(self, method, key, content=None):
+            if method == "PUT":
+                objects[key] = content
+            elif method == "GET":
+                return objects[key]
+            elif method == "DELETE":
+                objects.pop(key, None)
+
+    monkeypatch.setattr("app.audit_api.BunnyStorage.from_environment", lambda: Storage())
+    document = Document()
+    document.add_paragraph("Fictional original: our dashboard is guaranteed to eliminate all errors.")
+    buffer = BytesIO()
+    document.save(buffer)
+    content = buffer.getvalue()
+    key = str(uuid4())
+    with TestClient(create_app()) as client:
+        response = client.post("/api/audit/reviews/analyze-document", headers=headers(tokens, key=key),
+            data={"brand_id": "lumadesk"}, files={"file": ("test.docx", content,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document")})
+        assert response.status_code == 200, response.text
+        run_id = response.json()["review_run_id"]
+        assert len(objects) == 1 and next(iter(objects.values())) != content
+        assert client.post("/api/audit/reviews/analyze-document", headers=headers(tokens, key=key),
+            data={"brand_id": "lumadesk"}, files={"file": ("test.docx", content)}).status_code == 200
+        assert len(objects) == 1
+    with TestClient(create_app()) as client:
+        path = f"/api/audit/reviews/{run_id}/original"
+        restored = client.get(path, headers=headers(tokens))
+        assert restored.status_code == 200 and restored.content == content
+        assert restored.headers["cache-control"] == "no-store"
+        assert client.get(path).status_code == 401
+        assert client.get(path, headers=headers(tokens, "other")).status_code == 404
+        assert client.delete(f"/api/audit/reviews/{run_id}", headers=headers(tokens, "admin")).status_code == 204
+        assert not objects
+        assert database.audit_files_v1.count_documents({}) == 0
+
+
 def test_authenticated_encryption_and_key_rotation():
     cipher = encryption()
     envelope = cipher.encrypt("org-a", "run-a", b"private draft")

@@ -1,0 +1,47 @@
+# Opt-in storage deployment. Review settings before applying to existing services.
+# Free compute is for the demo; choose and size an always-on plan before production use.
+services:
+  - type: web
+    name: pramana-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /ready
+    envVars:
+      - key: CORS_ORIGINS
+        value: https://pramana-frontend.onrender.com
+      - key: PRAMANA_REQUIRE_MONGODB
+        value: "1"
+      - key: PRAMANA_REQUIRE_AUDIT
+        value: "1"
+      - key: PRAMANA_REQUIRE_BUNNY
+        value: "1"
+      - key: PRAMANA_ENABLE_LOCAL_INTAKE
+        value: "0"
+      - key: MONGODB_DB
+        value: pramana
+      - key: MONGODB_URI
+        sync: false
+      - key: PRAMANA_AUDIT_IDENTITIES
+        sync: false
+      - key: PRAMANA_AUDIT_KEYS
+        sync: false
+      - key: PRAMANA_AUDIT_ACTIVE_KEY
+        value: key1
+      - key: PRAMANA_AUDIT_RETENTION_DAYS
+        value: "30"
+      - key: BUNNY_STORAGE_HOST
+        sync: false
+      - key: BUNNY_STORAGE_ZONE
+        sync: false
+      - key: BUNNY_STORAGE_PASSWORD
+        sync: false
+  - type: web
+    name: pramana-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://pramana-api-46uh.onrender.com

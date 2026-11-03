@@ -1,6 +1,7 @@
 """Authenticate before body parsing; bound audit requests and sanitize failures."""
 
 import asyncio
+import os
 
 from fastapi import HTTPException
 from starlette.responses import JSONResponse
@@ -12,6 +13,8 @@ class AuditMiddleware:
         self.active = 0
 
     async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"].startswith("/api/reviews") and os.getenv("PRAMANA_REQUIRE_AUDIT") == "1":
+            return await JSONResponse({"detail": "Connect your organization access key before reviewing."}, 403)(scope, receive, send)
         if scope["type"] != "http" or not scope["path"].startswith("/api/audit/"):
             return await self.app(scope, receive, send)
 

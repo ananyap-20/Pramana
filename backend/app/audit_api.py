@@ -1,10 +1,12 @@
 """Authenticated audit routes. Legacy demo histories never share these collections."""
 
 from dataclasses import asdict
+import asyncio
 from datetime import UTC, datetime, timedelta
 import hashlib
 import json
 import os
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Header, HTTPException, Query, Request, Response, UploadFile
@@ -21,6 +23,8 @@ from app.schemas import AnalyzeResponse, EvidenceReceiptResponse
 from app.services.audit_security import AuditAuth, AuditPrincipal, SnapshotCipher
 from app.services.document_intake import DocumentIntakeError, MAX_DOCX_BYTES, extract_docx_bytes
 from app.services.review_service import UnknownBrandError, analyze_draft
+from app.services.bunny_storage import BunnyStorage
+from app.services.retained_files import RetainedFiles
 
 
 def digest(value) -> str:
@@ -58,8 +62,14 @@ class AuditRuntime:
         self.intake = intake
         self.repository = None
         self.auth = None
+        self.files = None
+        self.cleanup_task = None
+        self.cleanup_failed = False
+        storage = BunnyStorage.from_environment()
         identities = os.getenv("PRAMANA_AUDIT_IDENTITIES")
         if not identities:
+            if storage or os.getenv("PRAMANA_REQUIRE_AUDIT") == "1" or os.getenv("PRAMANA_REQUIRE_BUNNY") == "1":
+                raise ValueError("Deployment requires authenticated audit configuration.")
             if os.getenv("PRAMANA_AUDIT_KEYS") or os.getenv("PRAMANA_AUDIT_ACTIVE_KEY"):
                 raise ValueError("Audit encryption configuration requires audit identities.")
             return
@@ -72,10 +82,39 @@ class AuditRuntime:
         except ValueError:
             raise ValueError("Audit retention must be an integer from 1 to 90 days.") from None
         self.repository = AuditRepository(settings.mongodb_uri, settings.mongodb_db, cipher, days)
+        if storage:
+            self.files = RetainedFiles(self.repository, storage)
+        if os.getenv("PRAMANA_REQUIRE_BUNNY") == "1" and self.files is None:
+            raise ValueError("Deployment requires Bunny Storage configuration.")
 
     def start(self):
         if self.repository:
             self.repository.start()
+        if self.files:
+            self.files.start()
+
+    async def start_cleanup(self):
+        if self.files:
+            self.cleanup_task = asyncio.create_task(self.cleanup_loop())
+
+    async def cleanup_loop(self):
+        while True:
+            try:
+                await run_in_threadpool(self.files.sweep)
+                self.cleanup_failed = False
+            except Exception:
+                # Preserve cleanup references for retry; readiness checks provider availability.
+                self.cleanup_failed = True
+                logging.getLogger(__name__).warning("Private file cleanup failed; retained references will be retried.")
+            await asyncio.sleep(60)
+
+    async def stop_cleanup(self):
+        if self.cleanup_task:
+            self.cleanup_task.cancel()
+            try:
+                await self.cleanup_task
+            except asyncio.CancelledError:
+                pass
 
     def close(self):
         if self.repository:
@@ -140,9 +179,15 @@ class AuditRuntime:
                 def process():
                     existing = repository.existing(identity, key, fingerprint)
                     if existing:
-                        return repository.snapshot(identity, existing).analysis
+                        result = repository.snapshot(identity, existing).analysis
+                        if self.files:
+                            self.files.save(identity, result.review_run_id, content)
+                        return result
                     extracted = extract_docx_bytes(file.filename, content)
-                    return self.analyze(identity, key, fingerprint, brand_id, extracted.text, "docx", extracted.paragraph_count)
+                    result = self.analyze(identity, key, fingerprint, brand_id, extracted.text, "docx", extracted.paragraph_count)
+                    if self.files:
+                        self.files.save(identity, result.review_run_id, content)
+                    return result
                 return await run_in_threadpool(process)
             except DocumentIntakeError:
                 raise HTTPException(422, "The DOCX could not be extracted safely.") from None
@@ -156,9 +201,22 @@ class AuditRuntime:
             fingerprint = digest(["intake-v1", identity.actor_id, extraction_id, request.model_dump()])
             existing = repository.existing(identity, key, fingerprint)
             if existing:
-                return repository.snapshot(identity, existing).analysis
+                result = repository.snapshot(identity, existing).analysis
+                if self.files:
+                    self.files.save(identity, result.review_run_id, self.intake.original(extraction_id, upload_token))
+                return result
             analysis = self.intake.analyze(extraction_id, upload_token, request)
-            return self.store_analysis(identity, key, fingerprint, analysis)
+            result = self.store_analysis(identity, key, fingerprint, analysis)
+            if self.files:
+                self.files.save(identity, result.review_run_id, self.intake.original(extraction_id, upload_token))
+            return result
+
+        @router.get("/reviews/{run_id}/original")
+        def original(run_id: str, identity: Annotated[AuditPrincipal, Depends(principal)]):
+            if self.files is None:
+                raise HTTPException(503, "Private file storage is not configured.")
+            return Response(self.files.original(identity, run_id), media_type="application/octet-stream",
+                headers={"Content-Disposition": 'attachment; filename="original.bin"'})
 
         @router.get("/reviews/history/{brand_id}", response_model=AuditHistory)
         def history(brand_id: str, identity: Annotated[AuditPrincipal, Depends(principal)],
@@ -185,6 +243,8 @@ class AuditRuntime:
         def delete(run_id: str, identity: Annotated[AuditPrincipal, Depends(principal)]):
             if identity.role != "admin":
                 raise HTTPException(403, "Administrator access is required.")
+            if self.files:
+                self.files.delete(identity, run_id)
             repository.delete(identity, run_id)
             return Response(status_code=204)
 
