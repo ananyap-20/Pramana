@@ -10,6 +10,7 @@ export function VisualChecksPage() {
   const [assets, setAssets] = useState<VisualAsset[]>([])
   const [result, setResult] = useState<VisualResponse | null>(null)
   const [error, setError] = useState('')
+  const [errorGuidance, setErrorGuidance] = useState('')
   const [busy, setBusy] = useState(false)
   const [reading, setReading] = useState(false)
   const submitting = useRef(false)
@@ -18,16 +19,19 @@ export function VisualChecksPage() {
   const [viewportWidth, setViewportWidth] = useState(1280)
 
   async function loadDemo() {
-    setReading(true); setResult(null); setError('')
+    setReading(true); setResult(null); setError(''); setErrorGuidance('')
     try {
       const demo = await getVisualDemo()
       setHtml(demo.html); setCss(demo.css); setAssets(demo.assets); setMode('rendered')
-    } catch (err) { setError(err instanceof Error ? err.message : 'Could not load the fictional sample.') }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load the fictional sample.')
+      setErrorGuidance('Check that the API is reachable, then retry loading the sample.')
+    }
     finally { setReading(false) }
   }
 
   async function readAssets(files: FileList | null) {
-    setAssets([]); setResult(null); setError(''); setReading(true)
+    setAssets([]); setResult(null); setError(''); setErrorGuidance(''); setReading(true)
     try {
       const chosen = Array.from(files ?? [])
       if (chosen.length > 8 || chosen.some((file) => file.size > 192 * 1024) || chosen.reduce((n, file) => n + file.size, 0) > 384 * 1024) throw new Error('Use up to 8 PNG/JPEG assets, at most 192 KiB each and 384 KiB combined.')
@@ -47,13 +51,26 @@ export function VisualChecksPage() {
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (submitting.current || reading) return
-    submitting.current = true; setBusy(true); setError(''); setResult(null)
+    submitting.current = true; setBusy(true); setError(''); setErrorGuidance(''); setResult(null)
     try {
       setResult(await analyzeVisual({ brand_id: review?.brand_id ?? 'lumadesk', draft_id: review?.draft_id ?? standaloneId,
         draft_version: review?.draft_version ?? 'visual-input-v1', html, css, assets, mode,
         viewport_width: viewportWidth, viewport_height: 720 }))
     } catch (err) {
-      setError(err instanceof ApiError ? `API error ${err.status}: ${err.detail}` : 'The visual service could not be reached. Check your connection and retry.')
+      if (err instanceof ApiError) {
+        setError(`API error ${err.status}: ${err.detail}`)
+        setErrorGuidance(err.status === 404
+          ? 'No active approved visual policy is configured for this brand. Ask an administrator to enable one.'
+          : err.status === 408 ? 'The inspection timed out. Retry with smaller HTML or fewer assets.'
+            : err.status === 413 ? 'The request is too large. Reduce the HTML or asset sizes and retry.'
+              : err.status === 422 ? 'Review the HTML, CSS and asset requirements above, correct the input, then retry.'
+                : err.status === 429 ? 'Visual inspection is busy. Wait briefly and retry.'
+                  : err.status === 503 ? 'The visual inspection service is temporarily unavailable. Retry shortly.'
+                    : 'Your input remains available. Retry, or correct it if the API detail identifies an input issue.')
+      } else {
+        setError('The visual service could not be reached. Check your connection and retry.')
+        setErrorGuidance('Your input remains on this page; retry when the API connection is available.')
+      }
     } finally { submitting.current = false; setBusy(false) }
   }
   return <div className="page-stack">
@@ -75,7 +92,7 @@ export function VisualChecksPage() {
       </form>
       <section className="visual-result" aria-label="Visual check results" aria-busy={busy}>
         <h2>Inspection results</h2>
-        {error && <div className="error-box" role="alert"><p className="error-message">{error}</p><p className="muted-copy">A missing manifest requires administrator configuration. Your input is preserved for retry.</p></div>}
+        {error && <div className="error-box" role="alert"><p className="error-message">{error}</p><p className="muted-copy">{errorGuidance}</p></div>}
         {!result && <div className="empty-state" role={busy ? 'status' : undefined}><Icon name="image" /><h3>{busy ? 'Inspecting visual input…' : 'A clear view of the limits.'}</h3><p>Results appear here after a successful backend check. No mode provides a full WCAG assessment.</p></div>}
         {result && <><section className="review-panel"><p className="eyebrow">{result.mode === 'rendered' ? 'Rendered styles' : 'Static declarations'} · manifest {result.manifest_version}</p><h3>{result.findings.length} results returned</h3>{result.mode === 'rendered' && <p className="muted-copy">Chromium {result.rendering.browser_version} · {result.rendering.viewport_width} × {result.rendering.viewport_height} px · supplied scripts disabled · outbound requests blocked</p>}<dl className="provenance-rows"><dt>Draft</dt><dd><code>{result.draft_id} @ {result.draft_version}</code></dd><dt>Input SHA-256</dt><dd><code>{result.input_sha256}</code></dd><dt>Manifest SHA-256</dt><dd><code>{result.manifest_sha256}</code></dd><dt>Source</dt><dd>{result.source_id} @ {result.source_version}</dd><dt>Excerpt</dt><dd>{result.source_excerpt}</dd></dl></section>
           {!result.findings.length && <div className="empty-state"><h3>No applicable results</h3><p>No findings were returned for this input. This is not a compliance approval.</p></div>}
